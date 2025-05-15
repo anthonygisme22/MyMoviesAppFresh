@@ -1,0 +1,27 @@
+<div class="p-4">
+  <h1 class="text-2xl font-bold mb-4">Feature Flags Admin</h1>
+
+  <p *ngIf="error" class="text-red-600 mb-4">{{ error }}</p>
+
+  <table class="min-w-full table-auto bg-white shadow rounded">
+    <thead>
+      <tr class="bg-gray-200">
+        <th class="px-4 py-2 text-left">Name</th>
+        <th class="px-4 py-2 text-left">Enabled</th>
+        <th class="px-4 py-2"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let f of flags">
+        <td class="border px-4 py-2">{{ f.name }}</td>
+        <td class="border px-4 py-2">{{ f.isEnabled }}</td>
+        <td class="border px-4 py-2">
+          <button (click)="toggle(f)"
+                  class="bg-blue-600 text-white px-3 py-1 rounded">
+            {{ f.isEnabled ? 'Disable' : 'Enable' }}
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

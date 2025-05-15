@@ -1,0 +1,46 @@
+<!-- src/app/shared/navbar/navbar.component.html -->
+<nav class="fixed top-0 left-0 right-0 h-16 bg-bb-blue text-white px-4 flex items-center space-x-4 z-50 dark:bg-gray-900">
+  <!-- Logo / Home Link -->
+  <a routerLink="/" class="flex items-center space-x-2">
+    <img src="assets/logo.png" alt="Logo" class="h-8 w-8" />
+    <span class="text-2xl font-bold">MyMoviesApp</span>
+  </a>
+
+  <!-- Navigation Links -->
+  <a routerLink="/" routerLinkActive="underline">Home</a>
+  <a *ngIf="auth.isLoggedIn()" routerLink="/movies" routerLinkActive="underline">Movies</a>
+  <a *ngIf="auth.isLoggedIn()" routerLink="/watchlist" routerLinkActive="underline">Watchlist</a>
+  <a *ngIf="auth.isLoggedIn()" routerLink="/recommendations" routerLinkActive="underline">Recommendations</a>
+  <a *ngIf="auth.isLoggedIn()" routerLink="/profile" routerLinkActive="underline">Profile</a>
+  <a *ngIf="!auth.isLoggedIn()" routerLink="/login" routerLinkActive="underline">Login</a>
+  <a *ngIf="!auth.isLoggedIn()" routerLink="/register" routerLinkActive="underline">Register</a>
+
+  <!-- Username & Logout -->
+  <span *ngIf="auth.isLoggedIn()" class="ml-auto text-bb-yellow">
+    {{ auth.getUsername() }}
+  </span>
+  <button *ngIf="auth.isLoggedIn()"
+          (click)="logout()"
+          class="bg-bb-yellow text-black px-3 py-1 rounded">
+    Logout
+  </button>
+
+  <!-- Search Form -->
+  <form (ngSubmit)="onSearch()" class="flex ml-4">
+    <input [(ngModel)]="searchTerm"
+           name="search"
+           placeholder="Search all movies…"
+           class="px-2 py-1 rounded-l border-2 border-bb-yellow bg-white text-black" />
+    <button type="submit" class="bg-bb-yellow text-black px-4 rounded-r">
+      Go
+    </button>
+  </form>
+
+  <!-- Dark/Light Mode Toggle -->
+  <button (click)="toggleDarkMode()"
+          class="ml-4 p-1 rounded bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+          aria-label="Toggle dark mode">
+    <span *ngIf="!isDarkMode">🌙</span>
+    <span *ngIf="isDarkMode">☀️</span>
+  </button>
+</nav>

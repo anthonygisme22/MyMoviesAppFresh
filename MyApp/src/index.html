@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- Immediately apply dark mode if set in localStorage or system -->
+<script>
+    (function() {
+      const theme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (theme === 'dark' || (theme === null && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+</script>
+
+<head>
+  <meta charset="utf-8" />
+  <title>MyMoviesApp</title>
+  <base href="/" />
+  <!-- ... rest of your head ... -->
+</head>
+<body>
+  <app-root></app-root>
+</body>
+</html>

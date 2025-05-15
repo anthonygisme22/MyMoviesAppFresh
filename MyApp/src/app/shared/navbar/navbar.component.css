@@ -1,0 +1,11 @@
+/* Navbar is mobile-first so everything under sm: applies to desktop */
+nav {
+  z-index: 1000;
+}
+
+@media (min-width: 640px) {
+  /* Hide mobile menu on desktop */
+  .sm\\:hidden {
+    display: none !important;
+  }
+}

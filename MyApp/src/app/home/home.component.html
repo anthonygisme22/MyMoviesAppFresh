@@ -1,0 +1,62 @@
+<div class="pt-16 bg-gray-50 min-h-screen p-4 space-y-12">
+  <!-- Hero -->
+  <div class="relative h-56 bg-cover bg-center rounded-lg overflow-hidden" style="background-image:url('/assets/hero.jpg')">
+    <div class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+      <h1 class="text-4xl text-white font-bold">Welcome to MyMoviesApp</h1>
+    </div>
+  </div>
+
+  <!-- Featured Picks -->
+  <section>
+    <h2 class="text-2xl font-semibold mb-2">Featured Picks</h2>
+    <div *ngIf="loadingFeatured" class="text-gray-500">Loading…</div>
+    <div class="flex space-x-4 overflow-x-auto pb-2" *ngIf="!loadingFeatured">
+      <div *ngFor="let f of featured"
+           class="min-w-[180px] bg-white rounded shadow cursor-pointer"
+           (click)="viewMovie(f.movieId)">
+        <img [src]="imageBaseUrl + f.posterUrl"
+             alt="{{ f.title }}"
+             class="w-full h-40 object-cover rounded-t" />
+        <div class="p-2">
+          <h3 class="font-medium">{{ f.title }}</h3>
+          <p class="text-sm text-gray-600">Score: {{ f.score }}/10</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trending Now -->
+  <section>
+    <h2 class="text-2xl font-semibold mb-2">Trending Now</h2>
+    <div *ngIf="loadingTrending" class="text-gray-500">Loading…</div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4" *ngIf="!loadingTrending">
+      <div *ngFor="let t of trending"
+           class="bg-white rounded shadow overflow-hidden cursor-pointer"
+           (click)="viewMovie(t.movieId)">
+        <img [src]="imageBaseUrl + t.posterUrl"
+             alt="{{ t.title }}"
+             class="w-full h-32 object-cover" />
+        <div class="p-2">
+          <h3 class="text-sm font-medium">{{ t.title }}</h3>
+          <p class="text-xs text-gray-500">{{ t.averageRating }}/10 ({{ t.ratingCount }})</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Links -->
+  <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <button (click)="router.navigate(['/watchlist'])"
+            class="bg-bb-blue text-white rounded py-4 shadow hover:bg-opacity-90">
+      My Watchlist
+    </button>
+    <button (click)="router.navigate(['/movies'])"
+            class="bg-bb-yellow text-black rounded py-4 shadow hover:opacity-90">
+      Browse Movies
+    </button>
+    <button (click)="router.navigate(['/recommendations'])"
+            class="bg-green-500 text-white rounded py-4 shadow hover:opacity-90">
+      AI Recommendations
+    </button>
+  </section>
+</div>

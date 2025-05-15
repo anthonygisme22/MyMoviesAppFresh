@@ -1,0 +1,13 @@
+/* File: frontend/src/app/movies/movie-list/movie-list.component.css */
+
+/* Make sure the <a> fills its container */
+a {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+  /* Optional hover effect */
+  a:hover {
+    opacity: 0.95;
+  }

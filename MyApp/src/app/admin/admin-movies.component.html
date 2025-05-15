@@ -1,0 +1,44 @@
+<div class="pt-20 p-4 max-w-lg mx-auto space-y-4">
+  <h2 class="text-2xl font-bold">Admin: Add Movie & Rate</h2>
+
+  <form #f="ngForm" (ngSubmit)="onSubmit(f)" class="space-y-4">
+    <label class="block">
+      Title
+      <input name="title" ngModel required class="w-full border p-2 rounded" />
+    </label>
+
+    <label class="block">
+      TMDb ID (optional)
+      <input name="tmdbId" ngModel class="w-full border p-2 rounded" />
+      <small class="text-gray-500">If blank, manual entry.</small>
+    </label>
+
+    <label class="block">
+      Year
+      <input name="year" type="number" ngModel required class="w-full border p-2 rounded" />
+    </label>
+
+    <label class="block">
+      Poster URL
+      <input name="posterUrl" ngModel required class="w-full border p-2 rounded" />
+    </label>
+
+    <label class="block">
+      Score (1–10)
+      <input name="score"
+             type="number"
+             min="1"
+             max="10"
+             ngModel
+             required
+             class="w-full border p-2 rounded" />
+    </label>
+
+    <button type="submit" [disabled]="f.invalid" class="bg-bb-blue text-white px-4 py-2 rounded">
+      Add & Rate
+    </button>
+
+    <p *ngIf="error" class="text-red-600">{{ error }}</p>
+    <p *ngIf="success" class="text-green-600">{{ success }}</p>
+  </form>
+</div>

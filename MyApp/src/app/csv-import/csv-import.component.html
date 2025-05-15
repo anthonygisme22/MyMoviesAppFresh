@@ -1,0 +1,9 @@
+<label class="flex items-center space-x-2 cursor-pointer">
+  <span class="bg-bb-yellow text-black px-3 py-2 rounded">
+    Import CSV
+  </span>
+  <input type="file"
+         accept=".csv"
+         (change)="onFileSelected($event)"
+         class="hidden" />
+</label>

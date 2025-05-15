@@ -1,0 +1,7 @@
+button {
+  cursor: pointer;
+}
+
+input[type="file"] {
+  display: inline-block;
+}

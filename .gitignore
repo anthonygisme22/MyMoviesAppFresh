@@ -1,0 +1,7 @@
+﻿# ignore ASP.NET Core user-dev settings
+MyMoviesApp.Api/appsettings.Development.json
+
+# IDE and build outputs
+.vs/
+bin/
+obj/
