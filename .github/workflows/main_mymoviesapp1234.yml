@@ -53,5 +53,5 @@ jobs:
       - name: Deploy to Azure WebApp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: mymoviesapp1234   # ← EXACTLY your Web App name
+          app-name: mymoviesappnew123   # ← EXACTLY your Web App name
           package: publish
