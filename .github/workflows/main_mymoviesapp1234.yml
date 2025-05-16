@@ -1,49 +1,64 @@
-name: Build and Deploy .NET + Angular
+name: Build and Deploy MyMoviesApp
 
 on:
   push:
-    branches:
-      - main  # or 'master' or whatever branch you want
+    branches: [ "main" ]  # or your default branch
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
-    steps:
-      # 1) Check out your code
-      - uses: actions/checkout@v2
 
-      # 2) Set up Node so we can build Angular
+    steps:
+      # 1) Check out your repository
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # 2) Use Node 18 so Angular 19+ won't complain
       - name: Set up Node
         uses: actions/setup-node@v3
         with:
-          node-version: '16'  # Or 18, etc.
+          node-version: "18"
 
-      # 3) Install and build Angular
+      # 3) Install the Angular CLI globally (optional if you prefer npx)
+      - name: Install Angular CLI
+        run: npm install -g @angular/cli
+
+      # 4) Install Angular dependencies & build
+      #    If your Angular project is in a subfolder, 'cd' into that folder or set "working-directory"
       - name: Build Angular
         run: |
-          cd MyApp  # <-- adjust this folder name
           npm install
           ng build --configuration production
-          # Make sure angular.json "outputPath" points into your .NET project's wwwroot, 
-          # e.g. "../MyMoviesApp.Api/wwwroot" for Linux-friendly paths.
+        # working-directory: ./MyAngularFolder  # <--- If your Angular code is in a subfolder, uncomment & adjust.
 
-      # 4) Set up .NET
+      # -----------------------------------------------------
+      # (OPTIONAL) Steps for .NET if you also have a .NET API
+      # -----------------------------------------------------
       - name: Set up .NET
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '6.0.x'  # Or 7.0.x, 8.0.x, etc.
+          dotnet-version: "7.0.x"  # or 8.0.x if you’re targeting .NET 8
 
-      # 5) Publish your .NET project
+      - name: Restore .NET dependencies
+        run: dotnet restore MyMoviesApp.sln
+
+      - name: Build .NET
+        run: dotnet build MyMoviesApp.sln --configuration Release --no-restore
+
       - name: Publish .NET
-        run: |
-          dotnet restore MyMoviesApp.Api/MyMoviesApp.Api.csproj
-          dotnet publish MyMoviesApp.Api/MyMoviesApp.Api.csproj -c Release -o out
+        run: dotnet publish MyMoviesApp.sln --configuration Release --no-build --output ./out
 
-      # 6) Deploy to your Azure Web App
+      # ------------------------------------
+      # Deploy to Azure Web App
+      # ------------------------------------
       - name: Deploy to Azure WebApp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 'mymoviesapp1234'                      # <-- your app name in Azure
-          publish-profile: ${{ secrets.AzureWebAppPublishProfile }} 
-          package: './out'
+          app-name: "MyMoviesApp-YourAzureName"   # <-- Azure WebApp name
+          slot-name: "production"                 # or remove if not using deployment slots
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: "./out"                        # <-- Path to your published .NET output (if needed)
+          # If deploying just Angular, you can point to the dist folder
+          # package: "./MyAngularFolder/dist/MyApp"
