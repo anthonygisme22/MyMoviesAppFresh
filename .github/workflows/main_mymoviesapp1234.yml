@@ -3,67 +3,67 @@ name: Build_and_Deploy_MyMoviesApp
 on:
   push:
     branches:
-      - main  # change this if you use a different branch
+      - main
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # 1) Check out your code
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      # 1) Check out your repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    # 2) Set up Node for Angular
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
+      # 2) Set up Node for your Angular front-end
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
 
-    # 3) Install dependencies & build Angular inside MyApp
-    - name: Install and build Angular app
-      working-directory: MyApp
-      run: |
-        npm ci
-        npm run build
+      # 3) Install & build Angular (inside MyApp folder)
+      - name: Install and build Angular app
+        working-directory: MyApp
+        run: |
+          npm ci
+          npm run build
 
-    # 4) DEBUG: show folder structure so we know where dist landed
-    - name: Debug Angular output
-      run: |
-        echo "🔍 Listing MyApp folder structure:"
-        ls -R MyApp
-        echo "---"
-        ls -R MyApp/dist || echo "MyApp/dist does not exist"
+      # 4) DEBUG: Show exactly what's under MyApp/dist
+      - name: 🔍 Listing MyApp/dist contents
+        run: |
+          echo "---- MyApp/dist ----"
+          ls -R MyApp/dist || echo "MyApp/dist directory not found"
 
-    # 5) Set up .NET SDK
-    - name: Set up .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: '7.0.x'
+      # 5) Install .NET 8 (matches your global.json)
+      - name: Set up .NET 8 SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
 
-    # 6) Copy Angular build into API wwwroot, then restore/build/publish
-    - name: Publish .NET (with Angular content)
-      run: |
-        # remove any old static files
-        rm -rf MyMoviesApp.Api/wwwroot/*
-        # copy new files (we'll adjust this path once we see the debug output)
-        cp -R MyApp/dist/MyApp/* MyMoviesApp.Api/wwwroot/ || true
+      # 6) Copy static files into the API wwwroot, then restore/build/publish
+      - name: Publish .NET (with Angular files)
+        run: |
+          # clean out old static assets
+          rm -rf MyMoviesApp.Api/wwwroot/*
 
-        dotnet restore MyMoviesApp.sln
-        dotnet build MyMoviesApp.sln --configuration Release
-        dotnet publish MyMoviesApp.Api/MyMoviesApp.Api.csproj \
-          --configuration Release \
-          --output publish
+          # copy whatever showed up in MyApp/dist
+          cp -R MyApp/dist/* MyMoviesApp.Api/wwwroot/ || echo "No files copied – check the debug above"
 
-    # 7) Log in to Azure (requires AZURE_CREDENTIALS secret)
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+          # now build & publish
+          dotnet restore MyMoviesApp.sln
+          dotnet build MyMoviesApp.sln --configuration Release
+          dotnet publish MyMoviesApp.Api/MyMoviesApp.Api.csproj \
+            --configuration Release \
+            --output publish
 
-    # 8) Deploy the published folder to your Web App
-    - name: Deploy to Azure WebApp
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: mymoviesapp1234   # ← make sure this matches exactly
-        package: publish
+      # 7) Log into Azure (you need AZURE_CREDENTIALS in your repo secrets)
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # 8) Deploy the published output
+      - name: Deploy to Azure WebApp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: mymoviesapp1234    # ← make sure this matches your actual Web App name
+          package: publish
