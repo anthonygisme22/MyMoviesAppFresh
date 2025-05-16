@@ -16,30 +16,30 @@ using MyMoviesApp.Core.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 0) ── ADD CORS ────────────────────────────────────────────────────────────
+// (1) Add CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowMyFrontend", policy =>
     {
         policy
-            .WithOrigins(
-              "https://moovies4453.xyz",     // your production Angular URL
-              "http://localhost:4200"         // your local dev Angular URL
-            )
+            .WithOrigins("http://localhost:4200",
+                         "https://moovies4453.xyz")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
     });
 });
 
-// 1) ── Database ───────────────────────────────────────────────────────────
+// (2) Database: Connect with Npgsql (PostgreSQL) using a real connection string
+// e.g. "Host=localhost;Port=5432;Database=MyMoviesDb;Username=postgres;Password=secret;"
 builder.Services.AddDbContext<ApplicationDbContext>(opts =>
     opts.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
 
-// 2) ── JWT Auth ────────────────────────────────────────────────────────────
+// (3) JWT Auth
 var jwtKey = builder.Configuration["Jwt:Key"]
              ?? throw new InvalidOperationException("Jwt:Key missing.");
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -58,46 +58,43 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// 3) ── TMDb Client ─────────────────────────────────────────────────────────
+// (4) TMDb Client
 builder.Services.AddHttpClient<ITmdbService, TmdbService>(client =>
 {
     client.BaseAddress = new Uri("https://api.themoviedb.org/3/");
 });
 
-// 4) ── OpenAI Service ──────────────────────────────────────────────────────
+// (5) OpenAI Service
 builder.Services.AddHttpClient<IOpenAiService, OpenAiService>();
 
-// 5) ── Controllers ────────────────────────────────────────────────────────
+// (6) Controllers & Logging
 builder.Services.AddControllers();
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
-
 var app = builder.Build();
 
-// ── Static Files + SPA Fallback ─────────────────────────────────────────
+// For SPA static files (Angular build) if you’re serving it from .NET
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-// ── Dev Exception Page ───────────────────────────────────────────────────
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 }
 
-// ── HTTPS Redirection ────────────────────────────────────────────────────
 app.UseHttpsRedirection();
 
-// ── ENABLE CORS ───────────────────────────────────────────────────────────
+// (7) Enable CORS
 app.UseCors("AllowMyFrontend");
 
-// ── Authentication + Authorization ───────────────────────────────────────
+// (8) Auth + Controllers
 app.UseAuthentication();
 app.UseAuthorization();
-
-// ── Map Controllers & SPA Fallback ──────────────────────────────────────
 app.MapControllers();
+
+// (9) Fallback for Angular SPA
 app.MapFallbackToFile("index.html");
 
 app.Run();

@@ -1,4 +1,5 @@
-﻿using System;
+﻿// File: MyMoviesApp.Api/Controllers/AuthController.cs
+using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -8,14 +9,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using MyMoviesApp.Core.Entities;
 using MyMoviesApp.Core.Models;
 using MyMoviesApp.Infrastructure.Data;
-using MyMoviesApp.Core.Entities;
 
 namespace MyMoviesApp.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("[controller]")] // so /auth (no "api/")
     public class AuthController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
@@ -30,11 +31,13 @@ namespace MyMoviesApp.Api.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
+            // Check if username exists
             if (await _db.Users.AnyAsync(u => u.Username == dto.Username))
             {
                 return BadRequest("Username already exists.");
             }
 
+            // Create user
             var user = new User
             {
                 Username = dto.Username,
@@ -42,32 +45,32 @@ namespace MyMoviesApp.Api.Controllers
                 Role = "User"
             };
 
+            // Save to DB
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
+
             return Ok();
         }
 
         [HttpPost("login")]
         public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginDto dto)
         {
+            // Validate user
             var user = await _db.Users.SingleOrDefaultAsync(u => u.Username == dto.Username);
             if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
             {
                 return Unauthorized("Invalid credentials.");
             }
 
-            // Make sure your appsettings.json (or appsettings.Development.json) uses "Jwt:Key" not "Jwt:SecretKey".
-            var keyString = _config["Jwt:Key"];
-            // If this is still null or empty, check your JSON file or environment variables.
-            if (string.IsNullOrWhiteSpace(keyString))
-            {
-                throw new InvalidOperationException("JWT 'Key' is missing in configuration.");
-            }
+            // Grab JWT key from config
+            var keyString = _config["Jwt:Key"]
+                ?? throw new InvalidOperationException("JWT 'Key' missing in configuration.");
 
             var keyBytes = Encoding.UTF8.GetBytes(keyString);
             var issuer = _config["Jwt:Issuer"];
             var audience = _config["Jwt:Audience"];
 
+            // Build claims
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
@@ -88,7 +91,6 @@ namespace MyMoviesApp.Api.Controllers
             );
 
             var jwt = new JwtSecurityTokenHandler().WriteToken(token);
-
             return Ok(new AuthResponseDto(jwt, token.ValidTo));
         }
     }
