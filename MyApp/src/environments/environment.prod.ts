@@ -1,5 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://your-production-domain.com/api',
+  apiUrl: 'mymoviesapp1747331272.azurewebsites.net',
   tmdbImageBaseUrl: 'https://image.tmdb.org/t/p/w500'
 };
