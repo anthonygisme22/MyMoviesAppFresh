@@ -1,68 +1,33 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
+- uses: actions/checkout@v2
 
-name: Build and deploy ASP.Net Core app to Azure Web App - mymoviesapp1234
+# Setup Node to build Angular
+- name: Set up Node
+  uses: actions/setup-node@v3
+  with:
+    node-version: '16'  # or 18
 
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+- name: Install and build Angular
+  run: |
+    cd AngularProjectFolder
+    npm install
+    ng build --configuration production
+    # Output goes to ../<YourDotNetProject>/wwwroot if angular.json is set that way
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read #This is required for actions/checkout
+# Now build/publish .NET
+- name: Set up .NET
+  uses: actions/setup-dotnet@v2
+  with:
+    dotnet-version: '6.0.x'  # or 7.0 or 8.0
 
-    steps:
-      - uses: actions/checkout@v4
+- name: dotnet publish
+  run: |
+    cd ../<YourDotNetProject>
+    dotnet publish -c Release -o out
 
-      - name: Set up .NET Core
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0'
-
-      - name: Build with dotnet
-        run: dotnet build --configuration Release
-
-      - name: dotnet publish
-        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
-
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
-        with:
-          name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
-
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: .net-app
-      
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_E7355EAB1F0648D59B13DC38BF19D99A }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_B641BB78E98642B0898AAC65E7E126AA }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_5E088671BCBD46318E77EC6BED0CF9AD }}
-
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'mymoviesapp1234'
-          slot-name: 'Production'
-          package: .
-          
+# Finally deploy to Azure
+- name: Deploy to Azure WebApp
+  uses: azure/webapps-deploy@v2
+  with:
+    app-name: '<YourAzureWebAppName>'
+    publish-profile: ${{ secrets.<YourAzurePublishProfile> }}
+    package: './out'
