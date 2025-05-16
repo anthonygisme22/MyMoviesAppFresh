@@ -1,67 +1,57 @@
-name: Build and Deploy .NET + Angular
+name: Build & Deploy MyMoviesApp
 
 on:
   push:
-    branches:
-      - main
-  # Allows manual runs from GitHub's "Actions" tab
-  workflow_dispatch:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
-  build-and-deploy:
+  build_and_deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
-      # 1) Check out
-      - name: "Check out code"
+      # 1) Check out source
+      - name: Checkout
         uses: actions/checkout@v3
 
-      # 2) Set up .NET
-      - name: "Set up .NET"
+      # 2) Setup .NET 8 (matches your global.json)
+      - name: Set up .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: "7.0.x"  # or "6.0.x" / "8.0.x" etc.
-          
-      # 3) Set up Node
-      - name: "Set up Node"
+          dotnet-version: "8.0.x"
+
+      # 3) Setup Node (version 18) so we can build Angular
+      - name: Set up Node
         uses: actions/setup-node@v3
         with:
           node-version: "18"
-          
-      # 4) Build Angular
-      - name: "Install Angular deps"
-        run: npm install
-        working-directory: MyApp
-        
-      - name: "Build Angular"
-        run: npm run build
-        working-directory: MyApp
 
-      # 5) Build .NET
-      - name: "Restore .NET"
+      # 4) Install Angular dependencies & build
+      - name: Install & Build Angular
+        run: |
+          cd MyApp
+          npm install
+          npm run build -- --configuration production
+
+      # 5) Restore .NET solution
+      - name: Restore .NET
         run: dotnet restore MyMoviesApp.sln
 
-      - name: "Build .NET"
+      # 6) Build .NET (Release)
+      - name: Build .NET
         run: dotnet build MyMoviesApp.sln --configuration Release --no-restore
 
-      # (Optional) run tests here if you want:
-      # - name: "Test .NET"
-      #   run: dotnet test MyMoviesApp.sln --no-build
+      # 7) Publish the .NET API project
+      - name: Publish .NET
+        run: dotnet publish ./MyMoviesApp.Api/MyMoviesApp.Api.csproj --configuration Release --output out
 
-      # 6) Publish .NET
-      - name: "Publish .NET"
-        run: dotnet publish MyMoviesApp.Api/MyMoviesApp.Api.csproj --configuration Release --no-build -o publish
-
-      # 7) Copy Angular dist into wwwroot
-      - name: "Copy Angular into wwwroot"
-        run: |
-          mkdir -p publish/wwwroot
-          cp -r MyApp/dist/* publish/wwwroot/
-
-      # 8) Deploy to Azure Web App
-      - name: "Deploy to Azure WebApp"
+      # 8) (Optional) Deploy to Azure Web App
+      #    If you're using Azure Web App, fill in your actual app name and secret
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
         with:
-          app-name: "YourAzureWebAppName"
-          publish-profile: ${{ secrets.AzureAppService_PublishProfile }}
-          package: "publish"
+          app-name: "mymoviesapp1234"   # <-- change to your actual Azure Web App name
+          slot-name: "Production"
+          publish-profile: ${{ secrets.AzureWebAppPublishProfile }}
+          package: "./MyMoviesApp.Api/out"
