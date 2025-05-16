@@ -69,6 +69,10 @@ builder.Services.AddHttpClient<IOpenAiService, OpenAiService>();
 
 // 5) ── Controllers ────────────────────────────────────────────────────────
 builder.Services.AddControllers();
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
 
 var app = builder.Build();
 
