@@ -1,33 +1,49 @@
-- uses: actions/checkout@v2
+name: Build and Deploy .NET + Angular
 
-# Setup Node to build Angular
-- name: Set up Node
-  uses: actions/setup-node@v3
-  with:
-    node-version: '16'  # or 18
+on:
+  push:
+    branches:
+      - main  # or 'master' or whatever branch you want
 
-- name: Install and build Angular
-  run: |
-    cd AngularProjectFolder
-    npm install
-    ng build --configuration production
-    # Output goes to ../<YourDotNetProject>/wwwroot if angular.json is set that way
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1) Check out your code
+      - uses: actions/checkout@v2
 
-# Now build/publish .NET
-- name: Set up .NET
-  uses: actions/setup-dotnet@v2
-  with:
-    dotnet-version: '6.0.x'  # or 7.0 or 8.0
+      # 2) Set up Node so we can build Angular
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'  # Or 18, etc.
 
-- name: dotnet publish
-  run: |
-    cd ../<YourDotNetProject>
-    dotnet publish -c Release -o out
+      # 3) Install and build Angular
+      - name: Build Angular
+        run: |
+          cd my-angular-app-folder  # <-- adjust this folder name
+          npm install
+          ng build --configuration production
+          # Make sure angular.json "outputPath" points into your .NET project's wwwroot, 
+          # e.g. "../MyMoviesApp.Api/wwwroot" for Linux-friendly paths.
 
-# Finally deploy to Azure
-- name: Deploy to Azure WebApp
-  uses: azure/webapps-deploy@v2
-  with:
-    app-name: '<YourAzureWebAppName>'
-    publish-profile: ${{ secrets.<YourAzurePublishProfile> }}
-    package: './out'
+      # 4) Set up .NET
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '6.0.x'  # Or 7.0.x, 8.0.x, etc.
+
+      # 5) Publish your .NET project
+      - name: Publish .NET
+        run: |
+          dotnet restore MyMoviesApp.Api/MyMoviesApp.Api.csproj
+          dotnet publish MyMoviesApp.Api/MyMoviesApp.Api.csproj -c Release -o out
+
+      # 6) Deploy to your Azure Web App
+      - name: Deploy to Azure WebApp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'mymoviesapp1234'                      # <-- your app name in Azure
+          publish-profile: ${{ secrets.AzureWebAppPublishProfile }} 
+          package: './out'
