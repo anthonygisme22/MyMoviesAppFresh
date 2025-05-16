@@ -22,7 +22,7 @@ jobs:
       # 3) Install and build Angular
       - name: Build Angular
         run: |
-          cd my-angular-app-folder  # <-- adjust this folder name
+          cd MyApp  # <-- adjust this folder name
           npm install
           ng build --configuration production
           # Make sure angular.json "outputPath" points into your .NET project's wwwroot, 
