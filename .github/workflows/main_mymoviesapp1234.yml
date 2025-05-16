@@ -1,62 +1,62 @@
-name: Build & Deploy MyMoviesApp
-
+name: Build_and_Deploy_MyMoviesApp
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main  # or whatever branch triggers deployment
 
 jobs:
-  build_and_deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1) Check out your repository
-      - name: Checkout
-        uses: actions/checkout@v3
+    # 1) Check out code
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      # 2) Setup .NET (change the version if needed)
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: "8.0.x"
+    # 2) Set up Node to build the Angular front-end
+    - name: Set up Node
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
 
-      # 3) Setup Node so we can build Angular
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: "18"
+    # 3) Build the Angular app inside MyApp folder
+    - name: Build Angular
+      working-directory: MyApp
+      run: |
+        npm install
+        npm run build
 
-      # 4) Install & Build Angular in the "MyApp" folder
-      - name: Build Angular
-        run: |
-          cd MyApp
-          npm install
-          npm run build -- --configuration production
+    # 4) Set up .NET so we can build & publish the API
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '7.0.x'
 
-      # 5) dotnet restore
-      - name: Restore .NET
-        run: dotnet restore MyMoviesApp.sln
+    # 5) Copy Angular’s dist output into wwwroot, then publish .NET
+    - name: Publish .NET (with Angular content)
+      run: |
+        # Cleanup old wwwroot
+        rm -rf MyMoviesApp.Api/wwwroot/*
+        # Copy the Angular dist files
+        cp -R MyApp/dist/MyApp/* MyMoviesApp.Api/wwwroot/
+        
+        dotnet restore MyMoviesApp.sln
+        dotnet build MyMoviesApp.sln --configuration Release
+        dotnet publish MyMoviesApp.Api/MyMoviesApp.Api.csproj \
+            --configuration Release \
+            --output publish
 
-      # 6) dotnet build
-      - name: Build .NET
-        run: dotnet build MyMoviesApp.sln --configuration Release --no-restore
+    # 6) Log in to Azure (requires secret AZURE_CREDENTIALS)
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # 7) dotnet publish (specifically the API project)
-      - name: Publish .NET API
-        run: dotnet publish ./MyMoviesApp.Api/MyMoviesApp.Api.csproj -c Release -o out
-
-      # 8) Azure login action - this is crucial so the deploy action has credentials
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      # 9) Deploy to Azure Web App
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: "mymoviesapp1234"
-          slot-name: "Production"
-          package: "./MyMoviesApp.Api/out"
+    # 7) Deploy published output to Azure Web App
+    - name: Deploy to Azure WebApp
+      uses: azure/webapps-deploy@v2
+      with:
+        # This must match your actual Azure Web App name exactly
+        app-name: "mymoviesapp1234"
+        package: "./publish"
