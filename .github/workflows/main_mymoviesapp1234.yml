@@ -1,0 +1,57 @@
+name: Build_and_Deploy_MyMoviesApp
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Checkout your repo
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2) Set up Node 18 and build Angular (writes into MyMoviesApp.Api/wwwroot)
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install & build Angular
+        working-directory: MyApp
+        run: |
+          npm ci
+          npx ng build --configuration production
+
+      # 3) Debug: show that the files landed in the API wwwroot
+      - name: 🔍 List API wwwroot
+        run: |
+          echo "=== MyMoviesApp.Api/wwwroot contents ==="
+          ls -R MyMoviesApp.Api/wwwroot
+
+      # 4) Install .NET 8 (per your global.json) and publish
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore & publish .NET API
+        run: |
+          dotnet restore MyMoviesApp.sln
+          dotnet publish MyMoviesApp.Api/MyMoviesApp.Api.csproj \
+            --configuration Release \
+            --output publish
+
+      # 5) Login to Azure
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # 6) Deploy to your Web App
+      - name: Deploy to Azure WebApp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: mymoviesapp1234   # ← EXACTLY your Web App name
+          package: publish
