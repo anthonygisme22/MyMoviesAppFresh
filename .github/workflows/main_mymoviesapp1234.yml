@@ -10,58 +10,48 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1) Check out your code
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      # 1) Checkout your repo
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    # 2) Build the Angular front-end
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-    - name: Build Angular app
-      working-directory: MyApp
-      run: |
-        npm ci
-        npm run build
+      # 2) Set up Node 18 and build Angular (writes into MyMoviesApp.Api/wwwroot)
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install & build Angular
+        working-directory: MyApp
+        run: |
+          npm ci
+          npx ng build --configuration production
 
-    # 3) Debug: show what actually ended up in MyApp/dist
-    - name: 🔍 List MyApp/dist
-      run: |
-        echo "---- MyApp/dist ----"
-        ls -R MyApp/dist || echo "(MyApp/dist not found!)"
+      # 3) Debug: show that the files landed in the API wwwroot
+      - name: 🔍 List API wwwroot
+        run: |
+          echo "=== MyMoviesApp.Api/wwwroot contents ==="
+          ls -R MyMoviesApp.Api/wwwroot
 
-    # 4) Install the .NET 8 SDK (to satisfy your global.json)
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: '8.0.x'
+      # 4) Install .NET 8 (per your global.json) and publish
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore & publish .NET API
+        run: |
+          dotnet restore MyMoviesApp.sln
+          dotnet publish MyMoviesApp.Api/MyMoviesApp.Api.csproj \
+            --configuration Release \
+            --output publish
 
-    # 5) Copy the Angular output into your API's wwwroot & publish
-    - name: Publish .NET API (with Angular assets)
-      run: |
-        # clean out any old wwwroot
-        rm -rf MyMoviesApp.Api/wwwroot
-        mkdir -p MyMoviesApp.Api/wwwroot
+      # 5) Login to Azure
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-        # copy everything under MyApp/dist into wwwroot
-        cp -R MyApp/dist/. MyMoviesApp.Api/wwwroot/
-
-        # now restore & publish
-        dotnet restore MyMoviesApp.sln
-        dotnet publish MyMoviesApp.Api/MyMoviesApp.Api.csproj \
-          --configuration Release \
-          --output publish
-
-    # 6) Login to Azure (secrets.AZURE_CREDENTIALS must exist)
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-    # 7) Deploy the “publish” folder to your Azure Web App
-    - name: Deploy to Azure Web App
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: mymoviesapp1234      # ← change to your exact Web App name
-        package: publish
+      # 6) Deploy to your Web App
+      - name: Deploy to Azure WebApp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: mymoviesapp1234   # ← EXACTLY your Web App name
+          package: publish
