@@ -10,64 +10,58 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1) Get your code
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    # 1) Check out your code
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      # 2) Build the Angular front-end
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - name: Build Angular app
-        working-directory: MyApp
-        run: |
-          npm ci
-          npm run build
+    # 2) Build the Angular front-end
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    - name: Build Angular app
+      working-directory: MyApp
+      run: |
+        npm ci
+        npm run build
 
-      # 3) DEBUG: list exactly what ended up under MyApp/dist
-      - name: 🔍 List MyApp/dist
-        run: |
-          echo "---- MyApp/dist ----"
-          ls -R MyApp/dist || echo "  (MyApp/dist not found!)"
+    # 3) Debug: show what actually ended up in MyApp/dist
+    - name: 🔍 List MyApp/dist
+      run: |
+        echo "---- MyApp/dist ----"
+        ls -R MyApp/dist || echo "(MyApp/dist not found!)"
 
-      # 4) Install the .NET 8 SDK (must match your global.json)
-      - name: Setup .NET 8 SDK
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: '8.0.x'
+    # 4) Install the .NET 8 SDK (to satisfy your global.json)
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
 
-      # 5) Copy Angular output into wwwroot & publish the API
-      - name: Publish .NET API (with Angular)
-        run: |
-          # Clean & recreate wwwroot
-          rm -rf MyMoviesApp.Api/wwwroot
-          mkdir -p MyMoviesApp.Api/wwwroot
+    # 5) Copy the Angular output into your API's wwwroot & publish
+    - name: Publish .NET API (with Angular assets)
+      run: |
+        # clean out any old wwwroot
+        rm -rf MyMoviesApp.Api/wwwroot
+        mkdir -p MyMoviesApp.Api/wwwroot
 
-          # Copy everything under MyApp/dist into the wwwroot
-          for artifact in MyApp/dist/*; do
-            if [ -d "$artifact" ]; then
-              cp -R "$artifact"/* MyMoviesApp.Api/wwwroot/
-            else
-              cp "$artifact" MyMoviesApp.Api/wwwroot/
-            fi
-          done
+        # copy everything under MyApp/dist into wwwroot
+        cp -R MyApp/dist/. MyMoviesApp.Api/wwwroot/
 
-          # Now restore, build & publish
-          dotnet restore MyMoviesApp.sln
-          dotnet publish MyMoviesApp.Api/MyMoviesApp.Api.csproj \
-            --configuration Release \
-            --output publish
+        # now restore & publish
+        dotnet restore MyMoviesApp.sln
+        dotnet publish MyMoviesApp.Api/MyMoviesApp.Api.csproj \
+          --configuration Release \
+          --output publish
 
-      # 6) Login to Azure
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+    # 6) Login to Azure (secrets.AZURE_CREDENTIALS must exist)
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # 7) Push the published output to your Web App
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: mymoviesapp1234       # ← your exact Web App name!
-          package: publish
+    # 7) Deploy the “publish” folder to your Azure Web App
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: mymoviesapp1234      # ← change to your exact Web App name
+        package: publish
