@@ -23,6 +23,7 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins("http://localhost:4200",
+                         "http://localhost:5091/",
                          "https://moovies4453.xyz",
                          "https://mymoviesappnew123-a5cugse7g8esg2gu.eastus2-01.azurewebsites.net/")
 

@@ -1,4 +1,5 @@
 ﻿// File: MyMoviesApp.Api/Controllers/AuthController.cs
+
 using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -16,7 +17,7 @@ using MyMoviesApp.Infrastructure.Data;
 namespace MyMoviesApp.Api.Controllers
 {
     [ApiController]
-    [Route("[controller]")] // so /auth (no "api/")
+    [Route("[controller]")] // => "/auth"
     public class AuthController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
@@ -91,6 +92,8 @@ namespace MyMoviesApp.Api.Controllers
             );
 
             var jwt = new JwtSecurityTokenHandler().WriteToken(token);
+
+            // Return a JSON object with the token and expiration
             return Ok(new AuthResponseDto(jwt, token.ValidTo));
         }
     }
