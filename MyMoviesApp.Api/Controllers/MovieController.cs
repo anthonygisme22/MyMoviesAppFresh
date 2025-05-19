@@ -1,3 +1,5 @@
+// File: MyMoviesApp.Api/Controllers/MoviesController.cs
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -63,7 +65,7 @@ namespace MyMoviesApp.Api.Controllers
 
     [Authorize]
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("[controller]")] // => "/movies" (Removed 'api/' prefix)
     public class MoviesController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
@@ -77,7 +79,7 @@ namespace MyMoviesApp.Api.Controllers
             _config = config;
         }
 
-        // 1) GET /api/movies with pagination & filters
+        // 1) GET /movies with pagination & filters
         [HttpGet]
         public async Task<IActionResult> GetAll(
             [FromQuery] int page = 1,
@@ -138,7 +140,7 @@ namespace MyMoviesApp.Api.Controllers
             ));
         }
 
-        // 2) GET /api/movies/search?query=...
+        // 2) GET /movies/search?query=...
         [HttpGet("search")]
         public async Task<IActionResult> Search([FromQuery] string query)
         {
@@ -181,7 +183,7 @@ namespace MyMoviesApp.Api.Controllers
             return Ok(local.Concat(tmdbMapped));
         }
 
-        // 3) GET /api/movies/{id}
+        // 3) GET /movies/{id}
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -211,7 +213,7 @@ namespace MyMoviesApp.Api.Controllers
                 .Select(r => (int?)r.Score)
                 .FirstOrDefaultAsync();
 
-            // Master rating (Tristan's rating)
+            // Master rating (Tristan's rating, for example)
             var masterId = _config.GetValue<int>("MasterUserId");
             var masterRating = await _db.Ratings
                 .Where(r => r.UserId == masterId && r.MovieId == id)
@@ -233,7 +235,7 @@ namespace MyMoviesApp.Api.Controllers
             return Ok(dto);
         }
 
-        // 4) GET /api/movies/admin-ratings
+        // 4) GET /movies/admin-ratings
         [HttpGet("admin-ratings")]
         public async Task<IActionResult> GetAdminRatings()
         {
@@ -256,11 +258,10 @@ namespace MyMoviesApp.Api.Controllers
             return Ok(list);
         }
 
-        // 5) GET /api/movies/trending
+        // 5) GET /movies/trending
         [HttpGet("trending")]
         public async Task<IActionResult> GetTrending()
         {
-            // Group by MovieId instead of grouping by the entire Movie entity.
             var grouped = await _db.Ratings
                 .GroupBy(r => r.MovieId)
                 .Select(g => new
@@ -274,7 +275,6 @@ namespace MyMoviesApp.Api.Controllers
                 .Take(10)
                 .ToListAsync();
 
-            // Now join to Movies to retrieve movie details
             var trending = from g in grouped
                            join m in _db.Movies on g.MovieId equals m.MovieId
                            select new TrendingDto(

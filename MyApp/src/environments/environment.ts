@@ -1,5 +1,8 @@
+// File: MyMoviesApp.Client/src/environments/environment.ts
+
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:5091',                           // ← proxy from 4200 → 5091
+  // Directly point to the .NET API's local URL/port:
+  apiUrl: 'http://localhost:5091',
   tmdbImageBaseUrl: 'https://image.tmdb.org/t/p/w500'
 };

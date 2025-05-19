@@ -12,7 +12,6 @@
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
-            // ← Write your production build into the .NET API’s wwwroot
             "outputPath": "../MyMoviesApp.Api/wwwroot",
             "index": "src/index.html",
             "main": "src/main.ts",
@@ -64,8 +63,8 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "buildTarget": "my-app:build",
-            "proxyConfig": "src/proxy.conf.json"
+            "buildTarget": "my-app:build"
+            // "proxyConfig": "src/proxy.conf.json"  <-- Removed
           },
           "configurations": {
             "production": {
