@@ -3,17 +3,17 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using MyMoviesApp.Core.Services;
+using MyMoviesApp.Core.Services;                 // ITmdbService / IOpenAiService interfaces
 using MyMoviesApp.Infrastructure.Data;
-using MyMoviesApp.Infrastructure.Integration.Tmdb;    // ← TmdbService lives here
-using MyMoviesApp.Infrastructure.Services;            // ← OpenAiService lives here
+using MyMoviesApp.Infrastructure.Integration.Tmdb;
+using MyMoviesApp.Infrastructure.Services;
 using System;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
-// 1) Enable CORS so that Angular (http://localhost:4200) can call our API
+// 1) CORS for Angular dev host
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngularDev", policy =>
@@ -25,28 +25,22 @@ builder.Services.AddCors(options =>
     });
 });
 
-// 2) Register ApplicationDbContext (PostgreSQL)
+// 2) DbContext (PostgreSQL)
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"))
 );
 
-// 3) Register ITmdbService → TmdbService via HttpClient factory
-//    Here we explicitly set BaseAddress so TMDb URLs resolve correctly.
-builder.Services
-    .AddHttpClient<ITmdbService, TmdbService>(client =>
-    {
-        client.BaseAddress = new Uri("https://api.themoviedb.org/3/");
-    });
+// 3) TMDb & OpenAI via typed HttpClients
+builder.Services.AddHttpClient<ITmdbService, TmdbService>(c =>
+{
+    c.BaseAddress = new Uri("https://api.themoviedb.org/3/");
+});
+builder.Services.AddHttpClient<IOpenAiService, OpenAiService>(c =>
+{
+    c.BaseAddress = new Uri("https://api.openai.com/v1/");
+});
 
-// 4) Register IOpenAiService → OpenAiService via HttpClient factory
-//    Explicitly set BaseAddress so OpenAI endpoints resolve correctly.
-builder.Services
-    .AddHttpClient<IOpenAiService, OpenAiService>(client =>
-    {
-        client.BaseAddress = new Uri("https://api.openai.com/v1/");
-    });
-
-// 5) Configure JWT Authentication (Jwt:Key, Issuer, Audience must exist in appsettings)
+// 4) JWT auth
 var jwtKey = configuration["Jwt:Key"];
 var jwtIssuer = configuration["Jwt:Issuer"];
 var jwtAudience = configuration["Jwt:Audience"];
@@ -77,30 +71,40 @@ builder.Services
         };
     });
 
-// 6) Add controllers & Swagger
+// 5) MVC / Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// 7) (DEV) Auto-apply EF Core migrations
+// 6) Auto-migrate (dev / startup)
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.Migrate();
 }
 
-// 8) Configure middleware
+// 7) Middleware pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+// **NEW — serve Angular static files first**
+app.UseDefaultFiles();   // looks for index.html / default.htm
+app.UseStaticFiles();    // serves files in wwwroot
+
 app.UseHttpsRedirection();
 app.UseCors("AllowAngularDev");
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
+
+// **NEW — client-side routing fallback**
+app.MapFallbackToFile("index.html");
+
 app.Run();
