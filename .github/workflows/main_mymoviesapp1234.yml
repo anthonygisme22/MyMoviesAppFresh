@@ -23,7 +23,7 @@ jobs:
         working-directory: MyApp
         run: |
           npm ci
-          npx ng build --configuration production
+          npx ng build --configuration production --output-path ../MyMoviesApp.Api/wwwroot
 
       # 3) Debug: show that the files landed in the API wwwroot
       - name: 🔍 List API wwwroot
