@@ -1,20 +1,83 @@
 <!-- File: frontend/src/app/movies/movie-detail/movie-detail.component.html -->
-<div class="pt-20 p-4">
-  <div *ngIf="error" class="text-red-500 mb-2">
-    {{ error }}
-  </div>
 
-  <div *ngIf="movie">
-    <h1 class="text-2xl font-bold mb-4">{{ movie.title }} ({{ movie.year }})</h1>
-    <img [src]="movie.posterUrl" alt="{{ movie.title }}" class="mb-4" />
+<div *ngIf="error" class="text-red-600 text-center my-4">
+  {{ error }}
+</div>
 
-    <p class="mb-4">{{ movie.overview }}</p>
+<div *ngIf="movie" class="max-w-4xl mx-auto p-4">
+  <div class="flex flex-col md:flex-row bg-white shadow-lg rounded-lg overflow-hidden">
+    <!-- Poster Column -->
+    <div class="md:w-1/3">
+      <img [src]="environment.tmdbImageBaseUrl + movie.posterUrl"
+           [alt]="movie.title + ' poster'"
+           class="w-full h-auto object-cover" />
+    </div>
 
-    <h2 class="text-xl font-semibold">Cast</h2>
-    <ul class="list-disc ml-6">
-      <li *ngFor="let c of movie.cast">
-        {{ c.name }} as {{ c.character }}
-      </li>
-    </ul>
+    <!-- Details Column -->
+    <div class="md:w-2/3 p-4 flex flex-col">
+      <h1 class="text-2xl font-bold mb-2">{{ movie.title }} ({{ movie.year }})</h1>
+      <p class="text-sm text-gray-600 mb-4">TMDb ID: {{ movie.tmdbId }}</p>
+
+      <h2 class="text-xl font-semibold mb-1">Overview</h2>
+      <p class="text-gray-700 mb-4">{{ movie.overview }}</p>
+
+      <h2 class="text-xl font-semibold mb-1">Cast</h2>
+      <ul class="list-disc list-inside mb-4">
+        <li *ngFor="let c of movie.cast" class="text-gray-700">
+          <span class="font-medium">{{ c.name }}</span> as {{ c.character }}
+        </li>
+      </ul>
+
+      <div class="flex space-x-4 mb-4">
+        <!-- User’s own rating -->
+        <div class="bg-gray-100 p-2 rounded">
+          <span class="font-semibold">Your Rating:</span>
+          <span *ngIf="movie.userRating !== undefined; else noUserRating">
+            {{ movie.userRating }} / 100
+          </span>
+          <ng-template #noUserRating><em>Not rated</em></ng-template>
+        </div>
+
+        <!-- Glarky’s “master” rating -->
+        <div class="bg-gray-100 p-2 rounded">
+          <span class="font-semibold">Glarky’s Rating:</span>
+          <span *ngIf="movie.masterRating !== undefined; else noMasterRating">
+            {{ movie.masterRating }} / 100
+          </span>
+          <ng-template #noMasterRating><em>No rating</em></ng-template>
+        </div>
+      </div>
+
+      <!-- Add/Remove Watchlist Button -->
+      <button (click)="toggleWatchlist()"
+              class="mb-4 px-4 py-2 rounded
+               {{ inWatchlist
+                 ? 'bg-red-500 hover:bg-red-600 text-white'
+                 : 'bg-blue-500 hover:bg-blue-600 text-white' }}">
+        {{ inWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist' }}
+      </button>
+
+      <!-- Rating Controls -->
+      <div class="mt-auto space-y-2">
+        <!-- A simple <input type="number"> for brevity -->
+        <label class="block font-medium mb-1">Rate This Movie (0–100)</label>
+        <input type="number"
+               min="0"
+               max="100"
+               [(ngModel)]="selectedScore"
+               class="border p-2 rounded w-1/3" />
+        <div class="flex space-x-2">
+          <button (click)="submitRating()"
+                  class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+            {{ movie.userRating != null ? 'Update Rating' : 'Save Rating' }}
+          </button>
+          <button *ngIf="movie.userRating != null"
+                  (click)="clearRating()"
+                  class="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400">
+            Clear Rating
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>

@@ -1,16 +1,16 @@
-// File: frontend/src/app/movies/movie-list/movie-list.component.ts
+// File: src/app/movies/movie-list/movie-list.component.ts
 
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';   // ← Import RouterModule
-import { MovieService, Movie, PagedResponse } from '../movie.service';
+import { RouterModule } from '@angular/router';
+import { MovieService, Movie } from '../movie.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
   standalone: true,
   selector: 'app-movie-list',
-  imports: [CommonModule, FormsModule, RouterModule],       // ← Include RouterModule here
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './movie-list.component.html',
   styleUrls: ['./movie-list.component.css']
 })
@@ -46,7 +46,7 @@ export class MovieListComponent implements OnInit {
         this.maxRating
       )
       .subscribe({
-        next: (data: PagedResponse<Movie>) => {
+        next: (data) => {
           this.movies = data.items;
           this.totalItems = data.total;
           this.page = data.page;

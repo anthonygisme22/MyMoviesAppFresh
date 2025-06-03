@@ -1,103 +1,106 @@
 ﻿// File: MyMoviesApp.Api/Program.cs
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
+using MyMoviesApp.Core.Services;
+using MyMoviesApp.Infrastructure.Data;
+using MyMoviesApp.Infrastructure.Integration.Tmdb;    // ← TmdbService lives here
+using MyMoviesApp.Infrastructure.Services;            // ← OpenAiService lives here
 using System;
 using System.Text;
-using MyMoviesApp.Infrastructure.Data;
-using MyMoviesApp.Infrastructure.Services;
-using MyMoviesApp.Infrastructure.Integration.Tmdb;
-using MyMoviesApp.Core.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+var configuration = builder.Configuration;
 
-// (1) Add CORS
+// 1) Enable CORS so that Angular (http://localhost:4200) can call our API
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowMyFrontend", policy =>
+    options.AddPolicy("AllowAngularDev", policy =>
     {
         policy
-            .WithOrigins("http://localhost:4200",
-                         "http://localhost:5091/",
-                         "https://moovies4453.xyz",
-                         "https://mymoviesappnew123-a5cugse7g8esg2gu.eastus2-01.azurewebsites.net/")
-
+            .WithOrigins("http://localhost:4200")
             .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowAnyMethod();
     });
 });
 
-// (2) Database: Connect with Npgsql (PostgreSQL) using a real connection string
-// e.g. "Host=localhost;Port=5432;Database=MyMoviesDb;Username=postgres;Password=secret;"
-builder.Services.AddDbContext<ApplicationDbContext>(opts =>
-    opts.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+// 2) Register ApplicationDbContext (PostgreSQL)
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"))
 );
 
-// (3) JWT Auth
-var jwtKey = builder.Configuration["Jwt:Key"]
-             ?? throw new InvalidOperationException("Jwt:Key missing.");
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(opts =>
-{
-    opts.RequireHttpsMetadata = false;
-    opts.SaveToken = true;
-    opts.TokenValidationParameters = new TokenValidationParameters
+// 3) Register ITmdbService → TmdbService via HttpClient factory
+//    Here we explicitly set BaseAddress so TMDb URLs resolve correctly.
+builder.Services
+    .AddHttpClient<ITmdbService, TmdbService>(client =>
     {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-        ValidateIssuer = false,
-        ValidateAudience = false
-    };
-});
+        client.BaseAddress = new Uri("https://api.themoviedb.org/3/");
+    });
 
-// (4) TMDb Client
-builder.Services.AddHttpClient<ITmdbService, TmdbService>(client =>
+// 4) Register IOpenAiService → OpenAiService via HttpClient factory
+//    Explicitly set BaseAddress so OpenAI endpoints resolve correctly.
+builder.Services
+    .AddHttpClient<IOpenAiService, OpenAiService>(client =>
+    {
+        client.BaseAddress = new Uri("https://api.openai.com/v1/");
+    });
+
+// 5) Configure JWT Authentication (Jwt:Key, Issuer, Audience must exist in appsettings)
+var jwtKey = configuration["Jwt:Key"];
+var jwtIssuer = configuration["Jwt:Issuer"];
+var jwtAudience = configuration["Jwt:Audience"];
+if (string.IsNullOrWhiteSpace(jwtKey) ||
+    string.IsNullOrWhiteSpace(jwtIssuer) ||
+    string.IsNullOrWhiteSpace(jwtAudience))
 {
-    client.BaseAddress = new Uri("https://api.themoviedb.org/3/");
-});
+    throw new InvalidOperationException("Missing JWT configuration.");
+}
 
-// (5) OpenAI Service
-builder.Services.AddHttpClient<IOpenAiService, OpenAiService>();
+var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(keyBytes)
+        };
+    });
 
-// (6) Controllers & Logging
+// 6) Add controllers & Swagger
 builder.Services.AddControllers();
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddDebug();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// For SPA static files (Angular build) if you’re serving it from .NET
-app.UseDefaultFiles();
-app.UseStaticFiles();
+// 7) (DEV) Auto-apply EF Core migrations
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.Migrate();
+}
 
+// 8) Configure middleware
 if (app.Environment.IsDevelopment())
 {
-    app.UseDeveloperExceptionPage();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
-
-// (7) Enable CORS
-app.UseCors("AllowMyFrontend");
-
-// (8) Auth + Controllers
+app.UseCors("AllowAngularDev");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-
-// (9) Fallback for Angular SPA
-app.MapFallbackToFile("index.html");
-
 app.Run();

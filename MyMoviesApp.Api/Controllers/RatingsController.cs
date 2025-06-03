@@ -1,14 +1,11 @@
-﻿using System;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
+﻿// File: MyMoviesApp.Api/Controllers/RatingsController.cs
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using MyMoviesApp.Core.Entities;
-using MyMoviesApp.Infrastructure.Data;
-using MyMoviesApp.Infrastructure.Services;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using MyMoviesApp.Core.Interfaces;
+using MyMoviesApp.Core.DTOs;
 
 namespace MyMoviesApp.Api.Controllers
 {
@@ -17,62 +14,46 @@ namespace MyMoviesApp.Api.Controllers
     [Route("api/[controller]")]
     public class RatingsController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
-        private readonly CsvImportService _csvService;
-        private readonly IConfiguration _config;
+        private readonly IRatingService _ratingService;
 
-        public RatingsController(
-            ApplicationDbContext db,
-            CsvImportService csvService,
-            IConfiguration config)
+        public RatingsController(IRatingService ratingService)
         {
-            _db = db;
-            _csvService = csvService;
-            _config = config;
+            _ratingService = ratingService;
         }
 
-        // GET /api/ratings
-        [HttpGet]
-        public async Task<IActionResult> GetMyRatings()
+        // GET api/ratings/user/{userId}/movie/{movieId}
+        [HttpGet("user/{userId}/movie/{movieId}")]
+        public async Task<IActionResult> GetUserRating(int userId, int movieId)
+        {
+            var rating = await _ratingService.GetUserRating(userId, movieId);
+            if (rating == null) return NotFound();
+            return Ok(rating);
+        }
+
+        // POST api/ratings
+        [HttpPost]
+        public async Task<IActionResult> Upsert([FromBody] RatingCreateDto dto)
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var ratings = await _db.Ratings
-                .Where(r => r.UserId == userId)
-                .Include(r => r.Movie)
-                .Select(r => new {
-                    r.RatingId,
-                    r.MovieId,
-                    movieTitle = r.Movie.Title,
-                    r.Score,
-                    ratedAt = r.RatedAt
-                })
-                .ToListAsync();
-            return Ok(ratings);
+            var result = await _ratingService.UpsertRating(dto, userId);
+            return Ok(result);
         }
 
-        // GET /api/ratings/master
-        [HttpGet("master")]
-        public async Task<IActionResult> GetMasterRatings()
+        // GET api/ratings/user/{userId}
+        [HttpGet("user/{userId}")]
+        public async Task<IActionResult> GetByUser(int userId)
         {
-            var masterUserId = _config.GetValue<int>("MasterUserId");
-            var ratings = await _db.Ratings
-                .Where(r => r.UserId == masterUserId)
-                .Include(r => r.Movie)
-                .Select(r => new {
-                    r.RatingId,
-                    r.MovieId,
-                    movieTitle = r.Movie.Title,
-                    r.Score,
-                    ratedAt = r.RatedAt
-                })
-                .ToListAsync();
+            var ratings = await _ratingService.GetRatingsByUser(userId);
             return Ok(ratings);
         }
 
-        // -- remaining endpoints unchanged --
-        // GET /api/ratings/{movieId}/user-rating
-        // POST /api/ratings
-        // DELETE /api/ratings/{movieId}
-        // POST /api/ratings/csv-import
+        // DELETE api/ratings/user/{userId}/movie/{movieId}
+        [HttpDelete("user/{userId}/movie/{movieId}")]
+        public async Task<IActionResult> Delete(int userId, int movieId)
+        {
+            var success = await _ratingService.RemoveRating(userId, movieId);
+            if (!success) return NotFound();
+            return NoContent();
+        }
     }
 }

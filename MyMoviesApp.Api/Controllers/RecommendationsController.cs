@@ -40,9 +40,9 @@ namespace MyMoviesApp.Api.Controllers
 
                 var systemPrompt =
                     "You are a helpful movie recommendation assistant. " +
-                    "Respond only in valid JSON. " +
+                    "Respond only in valid JSON array of RecommendationDto. " +
                     $"User has already seen: {string.Join(", ", ratedTitles)}. " +
-                    "Don't recommend those.";
+                    "Do not recommend those.";
 
                 var userPrompt = string.IsNullOrWhiteSpace(req.Prompt)
                     ? "Recommend me some movies"
@@ -58,17 +58,14 @@ namespace MyMoviesApp.Api.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                // Likely an issue with the OpenAI call
                 return BadRequest(new { error = ex.Message });
             }
             catch (JsonException)
             {
-                // Malformed JSON from AI
                 return Ok(new { rawResponse = await _openAi.GetChatCompletionAsync(req.Prompt) });
             }
             catch (Exception ex)
             {
-                // Unexpected error
                 return StatusCode(500, new { error = ex.Message });
             }
         }

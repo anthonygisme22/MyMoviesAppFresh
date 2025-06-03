@@ -1,4 +1,4 @@
-﻿// MyMoviesApp.Api/Controllers/WatchlistController.cs
+﻿// File: MyMoviesApp.Api/Controllers/WatchlistController.cs
 
 using System;
 using System.Linq;
@@ -36,8 +36,9 @@ namespace MyMoviesApp.Api.Controllers
                         w.Movie.MovieId,
                         w.Movie.TmdbId,
                         w.Movie.Title,
-                        w.Movie.Year,
-                        w.Movie.PosterUrl
+                        w.Movie.PosterUrl,
+                        w.Movie.AverageRating,
+                        w.Movie.RatingCount
                     },
                     w.AddedAt
                 })
@@ -45,7 +46,7 @@ namespace MyMoviesApp.Api.Controllers
             return Ok(items);
         }
 
-        // DTO
+        // DTO for adding to watchlist
         public record WatchlistDto(int MovieId);
 
         // POST /api/watchlist
@@ -55,7 +56,9 @@ namespace MyMoviesApp.Api.Controllers
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             if (await _db.WatchlistItems
                     .AnyAsync(w => w.UserId == userId && w.MovieId == dto.MovieId))
+            {
                 return BadRequest("Already in watchlist.");
+            }
 
             var movie = await _db.Movies.FindAsync(dto.MovieId);
             if (movie == null) return NotFound("Movie not found.");

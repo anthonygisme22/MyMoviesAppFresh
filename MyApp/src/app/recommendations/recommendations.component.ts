@@ -1,54 +1,32 @@
-// File: frontend/src/app/recommendations/recommendations.component.ts
+// File: src/app/recommendations/recommendations.component.ts
 
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { HttpClientModule, HttpClient } from '@angular/common/http';
-import { environment } from '../../environments/environment';
-
-interface RecommendationDto {
-  title: string;
-  reason: string;
-}
+import { FormsModule } from '@angular/forms';      // ← Import FormsModule for [(ngModel)]
+import { MovieService } from '../movies/movie.service';
 
 @Component({
   standalone: true,
   selector: 'app-recommendations',
-  imports: [CommonModule, FormsModule, HttpClientModule],  // ← import HttpClientModule
+  imports: [CommonModule, FormsModule],
   templateUrl: './recommendations.component.html',
   styleUrls: ['./recommendations.component.css']
 })
 export class RecommendationsComponent {
-  prompt = '';
-  recommendations: RecommendationDto[] = [];
-  rawResponse = '';
+  promptText = '';
+  recommendations: any[] = [];
+  loading = false;
   error = '';
 
-  constructor(private http: HttpClient) { }
+  constructor(private movieService: MovieService) { }
 
-  getRecommendations() {
+  submitPrompt(): void {
     this.error = '';
-    this.recommendations = [];
-    this.rawResponse = '';
-
-    this.http
-      .post<RecommendationDto[] | { rawResponse: string } | { error: string }>(
-        `${environment.apiUrl}/recommendations`,
-        { prompt: this.prompt }
-      )
-      .subscribe({
-        next: data => {
-          if ('error' in data) {
-            this.error = data.error;
-          } else if (Array.isArray(data)) {
-            this.recommendations = data;
-          } else if ('rawResponse' in data) {
-            this.rawResponse = data.rawResponse;
-          }
-        },
-        error: err => {
-          this.error = err.error?.error || 'Failed to get recommendations.';
-        }
-      });
+    this.loading = true;
+    // For now, we have no backend route—show a placeholder error
+    setTimeout(() => {
+      this.error = 'AI recommendations are temporarily unavailable.';
+      this.loading = false;
+    }, 500);
   }
 }

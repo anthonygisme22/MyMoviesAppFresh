@@ -1,9 +1,117 @@
-/* Hide scrollbar but allow scroll */
-::-webkit-scrollbar {
-  width: 0.25rem;
+/* src/app/home/home.component.css */
+
+/* Entire page container is transparent so the navbar/dark background can show behind hero */
+.home-container {
+  background-color: transparent;
+  min-height: 100vh;
 }
 
-::-webkit-scrollbar-thumb {
-  background-color: rgba(0,0,0,0.2);
-  border-radius: 0.125rem;
+/* ====== HERO WRAPPER ===== */
+.hero-wrapper {
+  position: relative;
+  width: 100%;
+  /* Remove any unwanted cropping; let the image resize responsively */
+  overflow: hidden;
+}
+
+/* The image itself (will scale to width) */
+.hero-image {
+  display: block;
+  width: 100%;
+  height: auto; /* preserve aspect ratio */
+}
+
+/* Overlay “Welcome to MovieGorilla” */
+.hero-text-overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  /* Slight semi-transparent dark layer for contrast */
+  background: rgba(0, 0, 0, 0.35);
+  padding: 1rem 2rem;
+  border-radius: 0.5rem;
+}
+
+/* Hero title: always white with subtle text-shadow for legibility */
+.hero-title {
+  color: white;
+  font-size: 3rem; /* 48px */
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* ====== SECTION WRAPPERS ===== */
+/* Give each content section a light (white) background, regardless of theme */
+.content-section {
+  background-color: white;
+}
+/* Inner container for padding */
+.section-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* Section heading styling */
+.section-heading {
+  font-size: 1.75rem; /* 28px */
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #1f2937; /* Tailwind gray-800 */
+}
+
+/* ====== FEATURED HORIZONTAL SCROLL ===== */
+.featured-scrollbar {
+  display: flex;
+  overflow-x: auto;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+}
+
+  .featured-scrollbar::-webkit-scrollbar {
+    height: 0.5rem;
+  }
+
+  .featured-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 0.25rem;
+  }
+
+/* ====== TRENDING GRID ===== */
+.trending-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 1rem;
+}
+
+/* ====== MOVIE CARD COMMON ===== */
+.movie-card {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  max-width: 10rem; /* 160px */
+  flex-shrink: 0;
+}
+
+.movie-poster {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+}
+
+.movie-info {
+  padding: 0.5rem;
+}
+
+.movie-title {
+  font-size: 0.875rem; /* 14px */
+  font-weight: 500;
+  color: #111827; /* gray-900 */
+  margin: 0;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }

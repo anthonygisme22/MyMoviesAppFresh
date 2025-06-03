@@ -1,4 +1,4 @@
-// src/app/home/home.component.ts
+// File: frontend/src/app/home/home.component.ts
 
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -22,7 +22,6 @@ export class HomeComponent implements OnInit {
 
   imageBaseUrl = environment.tmdbImageBaseUrl;
 
-  // <-- router made public
   constructor(
     private homeSvc: HomeService,
     public router: Router
@@ -30,13 +29,25 @@ export class HomeComponent implements OnInit {
 
   ngOnInit(): void {
     this.homeSvc.getAdminRatings().subscribe({
-      next: data => { this.featured = data; this.loadingFeatured = false; },
-      error: () => { this.error = 'Failed to load featured picks.'; this.loadingFeatured = false; }
+      next: data => {
+        this.featured = data;
+        this.loadingFeatured = false;
+      },
+      error: () => {
+        this.error = 'Failed to load Glarky’s top picks.';
+        this.loadingFeatured = false;
+      }
     });
 
     this.homeSvc.getTrending().subscribe({
-      next: data => { this.trending = data; this.loadingTrending = false; },
-      error: () => { this.error = 'Failed to load trending movies.'; this.loadingTrending = false; }
+      next: data => {
+        this.trending = data;
+        this.loadingTrending = false;
+      },
+      error: () => {
+        this.error = 'Failed to load trending movies.';
+        this.loadingTrending = false;
+      }
     });
   }
 

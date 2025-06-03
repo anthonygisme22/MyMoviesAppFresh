@@ -1,4 +1,4 @@
-// File: MyMoviesApp.Client/src/app/services/auth.service.ts
+// File: frontend/src/app/services/auth.service.ts
 
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
@@ -12,8 +12,6 @@ interface AuthResponse {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private tokenKey = 'token';
-
-  // We'll call /auth endpoints on the .NET server:
   private baseUrl = `${environment.apiUrl}/auth`;
 
   constructor(private http: HttpClient) { }
@@ -23,7 +21,6 @@ export class AuthService {
       .post<AuthResponse>(`${this.baseUrl}/login`, { username, password })
       .pipe(
         tap(res => {
-          // Store token in Local Storage for later use
           localStorage.setItem(this.tokenKey, res.token);
         })
       );
@@ -55,7 +52,6 @@ export class AuthService {
     const token = this.getToken();
     if (!token) return null;
     try {
-      // Decode the middle part of the JWT
       return JSON.parse(atob(token.split('.')[1]));
     } catch {
       return null;
@@ -64,12 +60,18 @@ export class AuthService {
 
   getUsername(): string | null {
     const payload = this.getPayload();
-    // ClaimTypes.Name often gets stored as "unique_name" or "name" depending on your server
     return payload?.unique_name ?? payload?.name ?? null;
   }
 
   getRole(): string | null {
     const payload = this.getPayload();
     return payload?.role ?? null;
+  }
+
+  getUserId(): number | null {
+    const payload = this.getPayload();
+    const sub = payload?.sub ?? payload?.userId;
+    if (!sub) return null;
+    return Number(sub);
   }
 }

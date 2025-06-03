@@ -1,3 +1,5 @@
+// File: frontend/src/app/movies/movie.service.ts
+
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
@@ -17,30 +19,12 @@ export interface WatchlistItem {
   addedAt: string;
 }
 
-export interface CastMember {
-  name: string;
-  character: string;
-}
-
-export interface MovieDetail extends Movie {
-  overview: string;
-  cast: CastMember[];
-  userRating?: number;
-  masterRating?: number;
-}
-
-export interface PagedResponse<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
-
 @Injectable({ providedIn: 'root' })
 export class MovieService {
-  private baseUrl = `${environment.apiUrl}/movies`;
-  private watchlistUrl = `${environment.apiUrl}/watchlist`;
-  private ratingsUrl = `${environment.apiUrl}/ratings`;
+  // ◀ Updated: add "/api" before "/movies"
+  private baseUrl = `${environment.apiUrl}/api/movies`;
+  private watchlistUrl = `${environment.apiUrl}/api/watchlist`;
+  private ratingsUrl = `${environment.apiUrl}/api/ratings`;
 
   constructor(private http: HttpClient) { }
 
@@ -51,16 +35,27 @@ export class MovieService {
     yearTo?: number,
     minRating?: number,
     maxRating?: number
-  ): Observable<PagedResponse<Movie>> {
+  ): Observable<{
+    items: Movie[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }> {
     let params = new HttpParams()
       .set('page', page.toString())
       .set('pageSize', pageSize.toString());
+
     if (yearFrom != null) params = params.set('yearFrom', yearFrom.toString());
     if (yearTo != null) params = params.set('yearTo', yearTo.toString());
     if (minRating != null) params = params.set('minRating', minRating.toString());
     if (maxRating != null) params = params.set('maxRating', maxRating.toString());
 
-    return this.http.get<PagedResponse<Movie>>(this.baseUrl, { params });
+    return this.http.get<{
+      items: Movie[];
+      total: number;
+      page: number;
+      pageSize: number;
+    }>(this.baseUrl, { params });
   }
 
   search(query: string) {
@@ -70,10 +65,12 @@ export class MovieService {
   }
 
   getById(id: number) {
-    return this.http.get<MovieDetail>(`${this.baseUrl}/${id}`);
+    // ◀ Updated: calls /api/movies/{id}
+    return this.http.get<Movie>(`${this.baseUrl}/${id}`);
   }
 
   getWatchlist() {
+    // ◀ Updated: calls /api/watchlist
     return this.http.get<WatchlistItem[]>(this.watchlistUrl);
   }
 

@@ -1,4 +1,4 @@
-// File: MyMoviesApp.Api/Controllers/MoviesController.cs
+﻿// File: MyMoviesApp.Api/Controllers/MoviesController.cs
 
 using System;
 using System.Collections.Generic;
@@ -14,13 +14,14 @@ using MyMoviesApp.Core.Services;
 
 namespace MyMoviesApp.Api.Controllers
 {
-    // DTOs for movies
+    // DTO for the movie list, including Glarky’s (master) rating
     public record SearchMovieDto(
-        int? MovieId,
-        string? TmdbId,
+        int MovieId,
+        string TmdbId,
         string Title,
         int Year,
-        string PosterUrl
+        string PosterUrl,
+        int? MasterRating
     );
 
     public record CastMemberDto(string Name, string Character);
@@ -65,7 +66,7 @@ namespace MyMoviesApp.Api.Controllers
 
     [Authorize]
     [ApiController]
-    [Route("[controller]")] // => "/movies" (Removed 'api/' prefix)
+    [Route("[controller]")]   // ←BACK TO “/movies” instead of “/api/movies”
     public class MoviesController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
@@ -79,45 +80,37 @@ namespace MyMoviesApp.Api.Controllers
             _config = config;
         }
 
-        // 1) GET /movies with pagination & filters
+        // 1) GET /movies?page=1&pageSize=25
         [HttpGet]
         public async Task<IActionResult> GetAll(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 25,
             [FromQuery] int? yearFrom = null,
-            [FromQuery] int? yearTo = null,
-            [FromQuery] int? minRating = null,
-            [FromQuery] int? maxRating = null
+            [FromQuery] int? yearTo = null
         )
         {
             var query = _db.Movies.AsQueryable();
 
             if (yearFrom.HasValue)
-                query = query.Where(m => m.Year >= yearFrom.Value);
+            {
+                query = query.Where(m =>
+                    m.ReleaseDate != null &&
+                    m.ReleaseDate.Length >= 4 &&
+                    int.Parse(m.ReleaseDate.Substring(0, 4)) >= yearFrom.Value
+                );
+            }
 
             if (yearTo.HasValue)
-                query = query.Where(m => m.Year <= yearTo.Value);
-
-            if (minRating.HasValue || maxRating.HasValue)
             {
-                // We'll calculate average score by MovieId
-                var avgQuery = _db.Ratings
-                    .GroupBy(r => r.MovieId)
-                    .Select(g => new
-                    {
-                        MovieId = g.Key,
-                        Avg = g.Average(r => r.Score)
-                    });
-
-                // Join the average query with movies
-                query = from m in query
-                        join a in avgQuery on m.MovieId equals a.MovieId
-                        where (!minRating.HasValue || a.Avg >= minRating.Value)
-                           && (!maxRating.HasValue || a.Avg <= maxRating.Value)
-                        select m;
+                query = query.Where(m =>
+                    m.ReleaseDate != null &&
+                    m.ReleaseDate.Length >= 4 &&
+                    int.Parse(m.ReleaseDate.Substring(0, 4)) <= yearTo.Value
+                );
             }
 
             var total = await query.CountAsync();
+            var masterId = _config.GetValue<int>("MasterUserId");
 
             var items = await query
                 .OrderBy(m => m.Title)
@@ -127,8 +120,14 @@ namespace MyMoviesApp.Api.Controllers
                     m.MovieId,
                     m.TmdbId,
                     m.Title,
-                    m.Year,
-                    m.PosterUrl
+                    m.ReleaseDate != null && m.ReleaseDate.Length >= 4
+                        ? int.Parse(m.ReleaseDate.Substring(0, 4))
+                        : 0,
+                    m.PosterUrl,
+                    _db.Ratings
+                        .Where(r => r.MovieId == m.MovieId && r.UserId == masterId)
+                        .Select(r => (int?)r.Score)
+                        .FirstOrDefault()
                 ))
                 .ToListAsync();
 
@@ -145,41 +144,38 @@ namespace MyMoviesApp.Api.Controllers
         public async Task<IActionResult> Search([FromQuery] string query)
         {
             if (string.IsNullOrWhiteSpace(query))
-            {
                 return BadRequest("Query cannot be empty.");
-            }
 
-            // First, search local DB
             var local = await _db.Movies
                 .Where(m => EF.Functions.ILike(m.Title, $"%{query}%"))
                 .Select(m => new SearchMovieDto(
                     m.MovieId,
                     m.TmdbId,
                     m.Title,
-                    m.Year,
-                    m.PosterUrl
+                    m.ReleaseDate != null && m.ReleaseDate.Length >= 4
+                        ? int.Parse(m.ReleaseDate.Substring(0, 4))
+                        : 0,
+                    m.PosterUrl,
+                    null
                 ))
                 .ToListAsync();
 
-            // Then, search TMDB
             var tmdbResults = await _tmdb.SearchMoviesAsync(query);
             var tmdbMapped = tmdbResults.Select(r =>
             {
                 int year = 0;
                 if (DateTime.TryParse(r.ReleaseDate, out var dt))
-                {
                     year = dt.Year;
-                }
                 return new SearchMovieDto(
-                    null,
+                    0,
                     r.TmdbId,
                     r.Title,
                     year,
-                    r.PosterPath
+                    r.PosterPath,
+                    null
                 );
             });
 
-            // Combine local + TMDB
             return Ok(local.Concat(tmdbMapped));
         }
 
@@ -194,17 +190,16 @@ namespace MyMoviesApp.Api.Controllers
                     m.MovieId,
                     m.TmdbId,
                     m.Title,
-                    m.Year,
+                    Year = m.ReleaseDate != null && m.ReleaseDate.Length >= 4
+                        ? int.Parse(m.ReleaseDate.Substring(0, 4))
+                        : 0,
                     m.PosterUrl
                 })
                 .FirstOrDefaultAsync();
 
             if (movie == null)
-            {
                 return NotFound();
-            }
 
-            // Fetch detailed data from TMDB
             var details = await _tmdb.GetMovieDetailsAsync(movie.TmdbId);
 
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -213,7 +208,6 @@ namespace MyMoviesApp.Api.Controllers
                 .Select(r => (int?)r.Score)
                 .FirstOrDefaultAsync();
 
-            // Master rating (Tristan's rating, for example)
             var masterId = _config.GetValue<int>("MasterUserId");
             var masterRating = await _db.Ratings
                 .Where(r => r.UserId == masterId && r.MovieId == id)
@@ -222,7 +216,7 @@ namespace MyMoviesApp.Api.Controllers
 
             var dto = new MovieDetailDto(
                 movie.MovieId,
-                movie.TmdbId!,
+                movie.TmdbId,
                 movie.Title,
                 movie.Year,
                 movie.PosterUrl,
@@ -246,9 +240,11 @@ namespace MyMoviesApp.Api.Controllers
                 .OrderByDescending(r => r.Score)
                 .Select(r => new AdminRatingDto(
                     r.MovieId,
-                    r.Movie.TmdbId!,
+                    r.Movie.TmdbId,
                     r.Movie.Title,
-                    r.Movie.Year,
+                    r.Movie.ReleaseDate != null && r.Movie.ReleaseDate.Length >= 4
+                        ? int.Parse(r.Movie.ReleaseDate.Substring(0, 4))
+                        : 0,
                     r.Movie.PosterUrl,
                     r.Score
                 ))
@@ -279,9 +275,11 @@ namespace MyMoviesApp.Api.Controllers
                            join m in _db.Movies on g.MovieId equals m.MovieId
                            select new TrendingDto(
                                m.MovieId,
-                               m.TmdbId!,
+                               m.TmdbId,
                                m.Title,
-                               m.Year,
+                               m.ReleaseDate != null && m.ReleaseDate.Length >= 4
+                                   ? int.Parse(m.ReleaseDate.Substring(0, 4))
+                                   : 0,
                                m.PosterUrl,
                                Math.Round(g.Average, 1),
                                g.RatingCount

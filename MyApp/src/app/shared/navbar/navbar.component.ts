@@ -1,3 +1,5 @@
+// File: frontend/src/app/shared/navbar/navbar.component.ts
+
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -14,6 +16,7 @@ import { AuthService } from 'src/app/auth/auth.service';
 export class NavbarComponent implements OnInit {
   searchTerm = '';
   isDarkMode = false;
+  isMobileOpen = false; // <- add this
 
   constructor(public auth: AuthService, public router: Router) { }
 

@@ -1,11 +1,14 @@
-/* Navbar is mobile-first so everything under sm: applies to desktop */
+/* src/app/shared/navbar/navbar.component.css */
+
 nav {
-  z-index: 1000;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-@media (min-width: 640px) {
-  /* Hide mobile menu on desktop */
-  .sm\\:hidden {
-    display: none !important;
+  nav ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
-}
