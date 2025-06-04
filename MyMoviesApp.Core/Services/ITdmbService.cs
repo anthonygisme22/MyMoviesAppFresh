@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace MyMoviesApp.Core.Services
+namespace MyMoviesApp.Core.Interfaces
 {
     /// <summary>
     /// Defines TMDb integration methods for searching and fetching movie details.
@@ -10,6 +10,9 @@ namespace MyMoviesApp.Core.Services
     {
         Task<MovieSearchResultDto[]> SearchMoviesAsync(string query);
         Task<MovieDetailsDto> GetMovieDetailsAsync(string tmdbId);
+
+        // NEW: Fetch “trending/movie/day” from TMDb
+        Task<MovieSearchResultDto[]> GetTrendingMoviesAsync();
     }
 
     /// <summary>

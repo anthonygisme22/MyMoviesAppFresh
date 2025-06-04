@@ -1,10 +1,9 @@
-// File: frontend/src/app/home/home.component.ts
+// File: MyApp/src/app/home/home.component.ts
 
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
-import { HomeService, AdminRating, TrendingMovie } from './home.service';
-import { environment } from '../../environments/environment';
+import { HomeService, AdminRating, TrendingDto } from './home.service';
 
 @Component({
   standalone: true,
@@ -15,43 +14,46 @@ import { environment } from '../../environments/environment';
 })
 export class HomeComponent implements OnInit {
   featured: AdminRating[] = [];
-  trending: TrendingMovie[] = [];
+  trending: TrendingDto[] = [];
   loadingFeatured = true;
   loadingTrending = true;
-  error = '';
+  errorMsg = '';
 
-  imageBaseUrl = environment.tmdbImageBaseUrl;
-
-  constructor(
-    private homeSvc: HomeService,
-    public router: Router
-  ) { }
+  // Make router public so the template can access it
+  constructor(private homeSvc: HomeService, public router: Router) { }
 
   ngOnInit(): void {
+    // Fetch Glarky’s Top Picks
     this.homeSvc.getAdminRatings().subscribe({
       next: data => {
         this.featured = data;
         this.loadingFeatured = false;
       },
       error: () => {
-        this.error = 'Failed to load Glarky’s top picks.';
+        this.errorMsg = 'Unable to load Glarky’s Top Picks.';
         this.loadingFeatured = false;
       }
     });
 
+    // Fetch Trending Now
     this.homeSvc.getTrending().subscribe({
       next: data => {
         this.trending = data;
         this.loadingTrending = false;
       },
       error: () => {
-        this.error = 'Failed to load trending movies.';
+        this.errorMsg = 'Unable to load Trending Now.';
         this.loadingTrending = false;
       }
     });
   }
 
-  viewMovie(id: number): void {
-    this.router.navigate(['/movies', id]);
+  viewMovie(movieId: number, tmdbId: string): void {
+    if (movieId && movieId > 0) {
+      this.router.navigate(['/movies', movieId]);
+    } else {
+      // fallback: open TMDb page in new tab
+      window.open(`https://www.themoviedb.org/movie/${tmdbId}`, '_blank');
+    }
   }
 }

@@ -1,26 +1,37 @@
-<!-- File: frontend/src/app/movies/movie-list/movie-list.component.html -->
-
 <div class="pt-20 p-4 space-y-4">
+  <!-- Filters / Search -->
+  <form (ngSubmit)="applyFilters()" class="flex flex-wrap gap-2 items-end">
+    <div>
+      <label>Title Contains:</label>
+      <input type="text" [(ngModel)]="searchText" name="searchText"
+             class="border p-1 rounded w-48" placeholder="Search by title" />
+    </div>
+    <div>
+      <label>Min Avg. Rating:</label>
+      <input type="number" [(ngModel)]="minRating" name="minRating"
+             class="border p-1 w-20 rounded" />
+    </div>
+    <div>
+      <label>Max Avg. Rating:</label>
+      <input type="number" [(ngModel)]="maxRating" name="maxRating"
+             class="border p-1 w-20 rounded" />
+    </div>
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+      Apply
+    </button>
+  </form>
+
   <!-- Movie Grid -->
-  <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
     <ng-container *ngFor="let m of movies">
       <a [routerLink]="['/movies', m.movieId]"
-         class="block bg-white rounded-lg shadow hover:shadow-lg transition">
+         class="block bg-gray-800 text-white rounded overflow-hidden hover:bg-gray-700 transition">
         <img [src]="imageBaseUrl + m.posterUrl"
-             [alt]="m.title"
-             class="w-full h-40 object-cover rounded-t-lg" />
+             alt="{{ m.title }}"
+             class="w-full h-40 object-cover" />
         <div class="p-2">
-          <h3 class="font-semibold text-sm line-clamp-1">{{ m.title }}</h3>
-
-          <!-- Only show “Glarky’s Rating” if masterRating exists -->
-          <ng-container *ngIf="getMasterRating(m) as score; else noMasterRating">
-            <p class="text-xs text-gray-600 mt-1">
-              Glarky’s Rating: {{ score }}/100
-            </p>
-          </ng-container>
-          <ng-template #noMasterRating>
-            <p class="text-xs text-gray-400 mt-1"><em>Not rated yet</em></p>
-          </ng-template>
+          <h3 class="font-semibold">{{ m.title }}</h3>
+          <p class="text-sm text-gray-400">{{ m.averageRating }}/100 ({{ m.ratingCount }})</p>
         </div>
       </a>
     </ng-container>
@@ -28,18 +39,16 @@
 
   <!-- Pagination Controls -->
   <div class="flex justify-center items-center space-x-4 mt-4">
-    <button (click)="prevPage()"
-            [disabled]="page <= 1"
-            class="px-3 py-1 bg-gray-200 rounded disabled:opacity-50">
+    <button (click)="prevPage()" [disabled]="page <= 1"
+            class="px-3 py-1 bg-gray-600 rounded disabled:opacity-50 text-white">
       Previous
     </button>
     <span>Page {{ page }} of {{ totalPages }}</span>
-    <button (click)="nextPage()"
-            [disabled]="page >= totalPages"
-            class="px-3 py-1 bg-gray-200 rounded disabled:opacity-50">
+    <button (click)="nextPage()" [disabled]="page >= totalPages"
+            class="px-3 py-1 bg-gray-600 rounded disabled:opacity-50 text-white">
       Next
     </button>
   </div>
 
-  <p *ngIf="error" class="text-red-600 text-center">{{ error }}</p>
+  <p *ngIf="error" class="text-red-500 text-center">{{ error }}</p>
 </div>

@@ -1,4 +1,3 @@
-import { enableProdMode } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import {
   provideHttpClient,
@@ -6,32 +5,26 @@ import {
   HTTP_INTERCEPTORS
 } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
-import { provideAnimations } from '@angular/platform-browser/animations';
 
 import { AppComponent } from './app/app.component';
-import { appRoutes } from './app/app.routes';
+import { routes } from './app/app-routing.module';
+
 import { AuthInterceptor } from './app/auth/auth.interceptor';
-
-import { environment } from './environments/environment';
-
-if (environment.production) {
-  enableProdMode();
-}
 
 bootstrapApplication(AppComponent, {
   providers: [
-    // HTTP client + your interceptor
+    // Tell HttpClient to look for HTTP_INTERCEPTORS in DI
     provideHttpClient(withInterceptorsFromDi()),
+
+    // Register our AuthInterceptor so JWT is attached to every request
     {
       provide: HTTP_INTERCEPTORS,
       useClass: AuthInterceptor,
       multi: true
     },
 
-    // Router
-    provideRouter(appRoutes),
-
-    // Animations
-    provideAnimations()
+    // Provide the router with our exported `routes`
+    provideRouter(routes)
   ]
-}).catch(err => console.error(err));
+})
+  .catch(err => console.error(err));

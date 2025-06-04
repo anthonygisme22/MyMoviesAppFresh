@@ -1,44 +1,48 @@
-<nav class="flex items-center justify-between bg-gray-900 px-4 py-3">
-  <a routerLink="/" class="flex items-center space-x-3 text-white no-underline">
-    <img src="assets/gorilla-logo.png" alt="Gorilla Logo" class="w-8 h-8" />
-    <span class="text-xl font-semibold">MovieGorilla</span>
-  </a>
+<nav class="bg-gradient-to-r from-green-800 to-green-900 text-white fixed top-0 w-full z-50 shadow-lg">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      <!-- Logo / Home -->
+      <div class="flex-shrink-0">
+        <a routerLink="/" class="flex items-center space-x-2">
+          <img src="assets/gorilla-logo.png" alt="MovieGorilla" class="h-8 w-8 object-cover" />
+          <span class="text-xl font-extrabold tracking-tight">MovieGorilla</span>
+        </a>
+      </div>
 
-  <ul class="flex space-x-6 text-gray-200">
-    <li><a routerLink="/glarkys-ratings" class="hover:text-white">Glarky’s Ratings</a></li>
-    <li><a routerLink="/watchlist" class="hover:text-white">Watchlist</a></li>
-    <li><a routerLink="/recommendations" class="hover:text-white">AI Recs</a></li>
-  </ul>
+      <!-- Links -->
+      <div class="hidden md:flex space-x-4">
+        <a routerLink="/movies" class="px-3 py-2 rounded hover:bg-green-700">Browse</a>
+        <a routerLink="/watchlist" class="px-3 py-2 rounded hover:bg-green-700">Watchlist</a>
+        <a routerLink="/recommendations" class="px-3 py-2 rounded hover:bg-green-700">AI Picks</a>
+        <a routerLink="/profile" class="px-3 py-2 rounded hover:bg-green-700">Profile</a>
+        <a *ngIf="isAdmin" routerLink="/admin/ratings" class="px-3 py-2 rounded hover:bg-green-700">
+          Admin Ratings
+        </a>
+      </div>
 
-  <div class="flex items-center space-x-4">
-    <div class="relative">
-      <input type="text"
-             placeholder="Search..."
-             class="bg-gray-800 text-gray-100 rounded-full pl-4 pr-10 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-      <button class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200"
-              aria-label="Search">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M10 4a6 6 0 014.4724 9.991A6 6 0 0110 4zm0 0V2m0 20v-2m6.364-16.364l1.414 1.414M1.515 16.95l1.414-1.414m16.95-5.364h2M2 10H0m-2.05-4.95l1.414-1.414M1.515 3.05l1.414 1.414" />
-        </svg>
-      </button>
+      <!-- Auth / Dark‐mode Toggle -->
+      <div class="flex items-center space-x-4">
+        <button (click)="toggleDarkMode()" class="p-1 rounded hover:bg-green-700">
+          <svg *ngIf="!isDarkMode" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 3v1m0 16v1m8.66-12l-.7.7m-16 16l-.7.7M21 12h1M2 12H1m17.66 7.66l-.7-.7M4.34 4.34l-.7-.7" />
+          </svg>
+          <svg *ngIf="isDarkMode" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 3C7.03 3 3 7.03 3 12s4.03 9 9 9a9 9 0 000-18z" />
+          </svg>
+        </button>
+
+        <ng-container *ngIf="auth.isLoggedIn(); else showLogin">
+          <span class="text-sm">{{ auth.getUsername() }}</span>
+          <button (click)="logout()" class="px-3 py-2 rounded hover:bg-green-700 bg-red-600">Logout</button>
+        </ng-container>
+        <ng-template #showLogin>
+          <a routerLink="/login" class="px-3 py-2 rounded hover:bg-green-700 bg-blue-600">Login</a>
+        </ng-template>
+      </div>
     </div>
-
-    <button (click)="auth.logout(); router.navigate(['/']);" class="bg-indigo-500 hover:bg-indigo-600 text-white py-1 px-3 rounded">
-      Logout
-    </button>
-
-    <button (click)="toggleDarkMode()" aria-label="Toggle theme">
-      <svg *ngIf="!isDarkMode" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-300" viewBox="0 0 20 20" fill="currentColor">
-        <path d="M10 15a5 5 0 100-10 5 5 0 000 10zm0 3v2m0-18v2m7.071 2.929l1.414 1.414M1.515 16.95l1.414-1.414m16.95-5.364h2M2 10H0m16.95-1.515l1.414-1.414M1.515 3.05l1.414 1.414" />
-      </svg>
-      <svg *ngIf="isDarkMode" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-200" viewBox="0 0 20 20" fill="currentColor">
-        <path fill-rule="evenodd"
-              d="M17.293 13.293a8 8 0 11-10.586-10.586 8 8 0 0010.586 10.586zm-1.414-1.414A6 6 0 106.121 3.121a6 6 0 009.758 8.758z"
-              clip-rule="evenodd" />
-      </svg>
-    </button>
   </div>
 </nav>

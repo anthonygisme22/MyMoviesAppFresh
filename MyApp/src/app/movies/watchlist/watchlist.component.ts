@@ -1,50 +1,42 @@
-// File: frontend/src/app/movies/watchlist/watchlist.component.ts
-
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
 import { MovieService, WatchlistItem } from '../movie.service';
-import { environment } from '../../../environments/environment';
 
 @Component({
   standalone: true,
   selector: 'app-watchlist',
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule],
   templateUrl: './watchlist.component.html',
   styleUrls: ['./watchlist.component.css']
 })
 export class WatchlistComponent implements OnInit {
   watchlist: WatchlistItem[] = [];
   error = '';
-  imageBaseUrl = environment.tmdbImageBaseUrl;
+  loading = true;
 
-  constructor(
-    private movieService: MovieService,
-    private router: Router
-  ) { }
+  constructor(private movieService: MovieService) { }
 
   ngOnInit(): void {
-    this.loadWatchlist();
-  }
-
-  /** Fetch all WatchlistItems for the logged‐in user */
-  loadWatchlist(): void {
     this.movieService.getWatchlist().subscribe({
-      next: (items) => (this.watchlist = items),
-      error: () => (this.error = 'Failed to load watchlist.')
+      next: (data) => {
+        this.watchlist = data;
+        this.loading = false;
+      },
+      error: () => {
+        this.error = 'Failed to load watchlist.';
+        this.loading = false;
+      }
     });
   }
 
-  /** Navigate to the detail page for a given movie */
-  viewMovie(movieId: number): void {
-    this.router.navigate(['/movies', movieId]);
-  }
-
-  /** Remove a single item from the watchlist */
-  removeItem(item: WatchlistItem): void {
+  remove(item: WatchlistItem) {
     this.movieService.removeFromWatchlist(item.movie.movieId).subscribe({
-      next: () => this.loadWatchlist(),
-      error: () => (this.error = 'Failed to remove from watchlist.')
+      next: () => {
+        this.watchlist = this.watchlist.filter(i => i.movie.movieId !== item.movie.movieId);
+      },
+      error: () => {
+        this.error = 'Failed to remove from watchlist.';
+      }
     });
   }
 }

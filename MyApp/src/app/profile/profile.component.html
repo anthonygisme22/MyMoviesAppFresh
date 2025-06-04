@@ -1,7 +1,27 @@
-<div class="pt-16 p-4">
-  <h2 class="text-2xl font-bold">My Profile</h2>
-  <div class="mt-4 space-y-2">
-    <p><strong>Username:</strong> {{ username }}</p>
-    <p><strong>Role:</strong> {{ role }}</p>
+<div class="pt-20 p-4 max-w-2xl mx-auto">
+  <h2 class="text-2xl font-bold mb-4">My Profile</h2>
+
+  <div *ngIf="loading" class="text-gray-400">Loading…</div>
+  <div *ngIf="!loading && error" class="text-red-500">{{ error }}</div>
+
+  <div *ngIf="!loading && !error">
+    <p class="mb-4"><strong>Username:</strong> {{ username }}</p>
+
+    <h3 class="text-xl font-semibold mb-2">My Ratings</h3>
+    <div *ngIf="ratings.length === 0" class="text-gray-400 mb-4">
+      You haven’t rated any movies yet.
+    </div>
+    <div *ngIf="ratings.length > 0" class="space-y-2">
+      <div *ngFor="let r of ratings" class="flex items-center justify-between bg-gray-800 text-white p-3 rounded">
+        <div>
+          <span class="font-medium">Movie ID:</span> {{ r.movieId }}
+          <span class="ml-4"><strong>Score:</strong> {{ r.score }}/100</span>
+        </div>
+        <button (click)="removeRating(r)"
+                class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">
+          Remove
+        </button>
+      </div>
+    </div>
   </div>
 </div>

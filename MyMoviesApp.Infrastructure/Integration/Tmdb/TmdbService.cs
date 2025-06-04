@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
-using MyMoviesApp.Core.Services;
+using MyMoviesApp.Core.Interfaces;
 
 namespace MyMoviesApp.Infrastructure.Integration.Tmdb
 {
@@ -17,6 +16,7 @@ namespace MyMoviesApp.Infrastructure.Integration.Tmdb
         public TmdbService(HttpClient http, IConfiguration config)
         {
             _http = http;
+            _http.BaseAddress = new Uri("https://api.themoviedb.org/3/");
             _apiKey = config["Tmdb:ApiKey"]
                       ?? throw new InvalidOperationException("Tmdb:ApiKey missing in configuration.");
         }
@@ -58,9 +58,27 @@ namespace MyMoviesApp.Infrastructure.Integration.Tmdb
             );
         }
 
-        // ——— Internal types matching TMDb JSON ——————————————————————————
+        public async Task<MovieSearchResultDto[]> GetTrendingMoviesAsync()
+        {
+            // TMDb “trending/movie/day”
+            var url = $"trending/movie/day?api_key={_apiKey}";
+            var resp = await _http.GetFromJsonAsync<TmdbTrendingResponse>(url);
 
-        private record TmdbSearchResponse(int Page, List<TmdbMovie> Results);
+            if (resp?.Results == null)
+                return Array.Empty<MovieSearchResultDto>();
+
+            return resp.Results
+                       .Select(r => new MovieSearchResultDto(
+                           r.Id.ToString(),
+                           r.Title,
+                           r.Release_Date,
+                           r.Poster_Path
+                       ))
+                       .ToArray();
+        }
+
+        // Internal JSON mappings
+        private record TmdbSearchResponse(int Page, TmdbMovie[] Results);
         private record TmdbMovie(int Id, string Title, string Release_Date, string Poster_Path);
 
         private record TmdbDetailsResponse(
@@ -70,8 +88,9 @@ namespace MyMoviesApp.Infrastructure.Integration.Tmdb
             string Overview,
             TmdbCredits Credits
         );
-
-        private record TmdbCredits(List<TmdbCast> Cast);
+        private record TmdbCredits(TmdbCast[] Cast);
         private record TmdbCast(string Name, string Character);
+
+        private record TmdbTrendingResponse(int Page, TmdbMovie[] Results);
     }
 }

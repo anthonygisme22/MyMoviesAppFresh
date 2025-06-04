@@ -1,4 +1,4 @@
-// File: frontend/src/app/services/auth.service.ts
+// File: MyApp/src/app/auth/auth.service.ts
 
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
@@ -7,37 +7,30 @@ import { Observable, tap } from 'rxjs';
 
 interface AuthResponse {
   token: string;
+  expires: string;
 }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private tokenKey = 'token';
-  private baseUrl = `${environment.apiUrl}/auth`;
+  // NOTE: “/api/auth” instead of “/auth”
+  private baseUrl = `${environment.apiUrl}/api/auth`;
 
   constructor(private http: HttpClient) { }
 
   login(username: string, password: string): Observable<AuthResponse> {
     return this.http
       .post<AuthResponse>(`${this.baseUrl}/login`, { username, password })
-      .pipe(
-        tap(res => {
-          localStorage.setItem(this.tokenKey, res.token);
-        })
-      );
+      .pipe(tap(res => localStorage.setItem(this.tokenKey, res.token)));
   }
 
-  register(username: string, password: string): Observable<AuthResponse> {
-    return this.http
-      .post<AuthResponse>(`${this.baseUrl}/register`, { username, password })
-      .pipe(
-        tap(res => {
-          localStorage.setItem(this.tokenKey, res.token);
-        })
-      );
+  register(username: string, password: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/register`, { username, password });
   }
 
   logout(): void {
     localStorage.removeItem(this.tokenKey);
+    window.location.href = '/';
   }
 
   isLoggedIn(): boolean {
@@ -48,30 +41,25 @@ export class AuthService {
     return localStorage.getItem(this.tokenKey);
   }
 
-  private getPayload(): any | null {
+  getUsername(): string | null {
     const token = this.getToken();
     if (!token) return null;
     try {
-      return JSON.parse(atob(token.split('.')[1]));
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.unique_name ?? payload.name ?? null;
     } catch {
       return null;
     }
   }
 
-  getUsername(): string | null {
-    const payload = this.getPayload();
-    return payload?.unique_name ?? payload?.name ?? null;
-  }
-
   getRole(): string | null {
-    const payload = this.getPayload();
-    return payload?.role ?? null;
-  }
-
-  getUserId(): number | null {
-    const payload = this.getPayload();
-    const sub = payload?.sub ?? payload?.userId;
-    if (!sub) return null;
-    return Number(sub);
+    const token = this.getToken();
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.role ?? null;
+    } catch {
+      return null;
+    }
   }
 }

@@ -1,10 +1,8 @@
-// File: src/app/movies/movie-list/movie-list.component.ts
-
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { MovieService, Movie } from '../movie.service';
+import { MovieService, Movie, PagedResponse } from '../movie.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -23,10 +21,9 @@ export class MovieListComponent implements OnInit {
   pageSize = 25;
   totalItems = 0;
   totalPages = 0;
-  yearFrom?: number;
-  yearTo?: number;
   minRating?: number;
   maxRating?: number;
+  searchText = '';
 
   constructor(private movieService: MovieService) { }
 
@@ -40,13 +37,12 @@ export class MovieListComponent implements OnInit {
       .getMovies(
         this.page,
         this.pageSize,
-        this.yearFrom,
-        this.yearTo,
         this.minRating,
-        this.maxRating
+        this.maxRating,
+        this.searchText
       )
       .subscribe({
-        next: (data) => {
+        next: (data: PagedResponse<Movie>) => {
           this.movies = data.items;
           this.totalItems = data.total;
           this.page = data.page;

@@ -1,32 +1,24 @@
-<!-- File: frontend/src/app/movies/watchlist/watchlist.component.html -->
+<div class="pt-20 p-4 max-w-3xl mx-auto">
+  <h2 class="text-2xl font-bold mb-4">My Watchlist</h2>
 
-<div class="pt-20 p-4">
-  <h2 class="text-2xl font-semibold mb-4">My Watchlist</h2>
+  <div *ngIf="loading" class="text-gray-400">Loading…</div>
+  <div *ngIf="!loading && error" class="text-red-500">{{ error }}</div>
 
-  <p *ngIf="error" class="text-red-600 text-center mb-4">{{ error }}</p>
-
-  <div *ngIf="watchlist.length === 0" class="text-gray-600 text-center">
+  <div *ngIf="!loading && watchlist.length === 0" class="text-gray-400">
     Your watchlist is empty.
   </div>
 
-  <div *ngIf="watchlist.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-    <div *ngFor="let w of watchlist" class="bg-white rounded-lg shadow overflow-hidden">
-      <img [src]="imageBaseUrl + w.movie.posterUrl"
-           [alt]="w.movie.title"
+  <div *ngIf="!loading && watchlist.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div *ngFor="let item of watchlist" class="bg-gray-900 text-white rounded-lg overflow-hidden shadow-lg">
+      <img [src]="'https://image.tmdb.org/t/p/w500' + item.movie.posterUrl"
+           alt="{{ item.movie.title }}"
            class="w-full h-40 object-cover" />
-      <div class="p-2">
-        <h3 class="font-semibold text-sm line-clamp-1">{{ w.movie.title }}</h3>
-        <p class="text-xs text-gray-500">Added {{ w.addedAt | date:'shortDate' }}</p>
-        <div class="mt-2 flex space-x-2">
-          <button (click)="viewMovie(w.movie.movieId)"
-                  class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-xs">
-            View
-          </button>
-          <button (click)="removeItem(w)"
-                  class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-xs">
-            Remove
-          </button>
-        </div>
+      <div class="p-2 flex flex-col">
+        <h3 class="font-semibold">{{ item.movie.title }}</h3>
+        <button (click)="remove(item)"
+                class="mt-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded self-start">
+          Remove
+        </button>
       </div>
     </div>
   </div>

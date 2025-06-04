@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AdminRatingsService, AdminRating } from './admin-ratings.service';
+
+// ← Adjust this path: go up two levels to reach movies/movie.service
+import { MovieService, AdminRatingDto } from '../../movies/movie.service';
 
 @Component({
   standalone: true,
@@ -11,42 +13,58 @@ import { AdminRatingsService, AdminRating } from './admin-ratings.service';
   styleUrls: ['./admin-ratings.component.css']
 })
 export class AdminRatingsComponent implements OnInit {
-  ratings: AdminRating[] = [];
-  newMovieId?: number;
-  newScore = 10;
-  loading = true;
-  error = '';
+  masterRatings: AdminRatingDto[] = [];
+  newMovieId: number | null = null;
+  newScore: number | null = null;
+  loading: boolean = true;
+  error: string = '';
 
-  constructor(private svc: AdminRatingsService) { }
+  constructor(private movieSvc: MovieService) { }
 
   ngOnInit(): void {
-    this.load();
+    this.loadMasterRatings();
   }
 
-  load(): void {
+  loadMasterRatings() {
     this.loading = true;
-    this.svc.getAll().subscribe({
-      next: data => { this.ratings = data; this.loading = false; },
-      error: () => { this.error = 'Failed to load.'; this.loading = false; }
+    this.movieSvc.getAdminRatings().subscribe({
+      next: (data) => {
+        this.masterRatings = data;
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('Error loading admin ratings:', err);
+        this.error = 'Failed to load Glarky’s picks.';
+        this.loading = false;
+      }
     });
   }
 
-  add(): void {
-    if (!this.newMovieId) return;
-    this.svc.upsert(this.newMovieId, this.newScore).subscribe(() => this.load());
-  }
-
-  update(r: AdminRating): void {
-    const val = prompt('New score for ' + r.movieTitle, r.score.toString());
-    if (val !== null) {
-      const parsed = parseInt(val, 10);
-      if (!isNaN(parsed)) this.svc.upsert(r.movieId, parsed).subscribe(() => this.load());
+  upsertRating() {
+    if (this.newMovieId == null || this.newScore == null) {
+      this.error = 'Enter both Movie ID and Score.';
+      return;
     }
-  }
-
-  remove(r: AdminRating): void {
-    if (confirm(`Delete rating for "${r.movieTitle}"?`)) {
-      this.svc.delete(r.movieId).subscribe(() => this.load());
+    if (this.newScore < 1 || this.newScore > 100) {
+      this.error = 'Score must be between 1 and 100.';
+      return;
     }
+    this.error = '';
+    this.movieSvc.upsertAdminRating(this.newMovieId, this.newScore).subscribe({
+      next: (updated) => {
+        const idx = this.masterRatings.findIndex(r => r.movieId === updated.movieId);
+        if (idx > -1) {
+          this.masterRatings[idx] = updated;
+        } else {
+          this.masterRatings.push(updated);
+        }
+        this.newMovieId = null;
+        this.newScore = null;
+      },
+      error: (err) => {
+        console.error('Error upserting admin rating:', err);
+        this.error = 'Failed to save Glarky’s rating.';
+      }
+    });
   }
 }
