@@ -1,6 +1,4 @@
-﻿// File: MyMoviesApp.Api/Controllers/MovieController.cs
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -14,6 +12,7 @@ using MyMoviesApp.Infrastructure.Data;
 
 namespace MyMoviesApp.Api.Controllers
 {
+    // DTOs used by MovieController
     public record SearchMovieDto(
         int MovieId,
         string TmdbId,
@@ -36,6 +35,7 @@ namespace MyMoviesApp.Api.Controllers
         int? MasterRating
     );
 
+    // Represents one of Glarky’s Top Picks
     public record AdminRatingDto(
         int MovieId,
         string TmdbId,
@@ -44,6 +44,7 @@ namespace MyMoviesApp.Api.Controllers
         int Score
     );
 
+    // Represents one Trending movie (from TMDb)
     public record TrendingDto(
         int MovieId,
         string TmdbId,
@@ -79,6 +80,7 @@ namespace MyMoviesApp.Api.Controllers
             _config = config;
         }
 
+        // 1) GET /api/movies?page=&pageSize=&minRating=&maxRating=
         [HttpGet]
         public async Task<IActionResult> GetAll(
             [FromQuery] int page = 1,
@@ -129,12 +131,14 @@ namespace MyMoviesApp.Api.Controllers
             ));
         }
 
+        // 2) GET /api/movies/search?query=…
         [HttpGet("search")]
         public async Task<IActionResult> Search([FromQuery] string query)
         {
             if (string.IsNullOrWhiteSpace(query))
                 return BadRequest("Query cannot be empty.");
 
+            // Local DB search
             var local = await _db.Movies
                 .Where(m => EF.Functions.ILike(m.Title, $"%{query}%"))
                 .Select(m => new SearchMovieDto(
@@ -147,6 +151,7 @@ namespace MyMoviesApp.Api.Controllers
                 ))
                 .ToListAsync();
 
+            // TMDb fallback
             var tmdbResults = await _tmdb.SearchMoviesAsync(query);
             var tmdbMapped = tmdbResults.Select(r =>
                 new SearchMovieDto(
@@ -162,9 +167,11 @@ namespace MyMoviesApp.Api.Controllers
             return Ok(local.Concat(tmdbMapped));
         }
 
+        // 3) GET /api/movies/{id}
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
+            // First, attempt to find the movie in the local DB by MovieId
             var movie = await _db.Movies
                 .Where(m => m.MovieId == id)
                 .Select(m => new
@@ -179,6 +186,7 @@ namespace MyMoviesApp.Api.Controllers
 
             if (movie != null)
             {
+                // If found locally, fetch full TMDb details for cast + overview
                 var details = await _tmdb.GetMovieDetailsAsync(movie.TmdbId);
 
                 var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -187,12 +195,9 @@ namespace MyMoviesApp.Api.Controllers
                     .Select(r => (int?)r.Score)
                     .FirstOrDefaultAsync();
 
-                // If MasterUserId is missing or invalid, default to 1
-                int masterId = 1;
-                if (!int.TryParse(_config["MasterUserId"], out masterId))
-                {
+                // Fetch the “master” (Glarky) rating—still relevant on the details page
+                if (!int.TryParse(_config["MasterUserId"], out var masterId))
                     masterId = 1;
-                }
 
                 var masterRating = await _db.Ratings
                     .Where(r => r.UserId == masterId && r.MovieId == id)
@@ -209,10 +214,13 @@ namespace MyMoviesApp.Api.Controllers
                     userRating,
                     masterRating
                 );
+
                 return Ok(dto);
             }
             else
             {
+                // If not in local DB, treat `id` as a TMDb integer ID.
+                // Convert `id` back to string, and attempt to fetch from TMDb.
                 try
                 {
                     var tmdbDetails = await _tmdb.GetMovieDetailsAsync(id.ToString());
@@ -230,7 +238,7 @@ namespace MyMoviesApp.Api.Controllers
                 }
                 catch (InvalidOperationException)
                 {
-                    return NotFound();
+                    return NotFound(); // neither local nor TMDb found
                 }
                 catch
                 {
@@ -239,21 +247,20 @@ namespace MyMoviesApp.Api.Controllers
             }
         }
 
+        // 4) GET /api/movies/admin-ratings
+        //    Returns **all** ratings by MasterUserId (no .Take(10))
         [HttpGet("admin-ratings")]
         public async Task<IActionResult> GetAdminRatings()
         {
-            // Safely parse MasterUserId; default to 1 if missing/invalid
-            int masterId = 1;
-            if (!int.TryParse(_config["MasterUserId"], out masterId))
-            {
+            if (!int.TryParse(_config["MasterUserId"], out var masterId))
                 masterId = 1;
-            }
 
             try
             {
-                var adminRatings = await _db.Ratings
+                var masterRatings = await _db.Ratings
                     .Where(r => r.UserId == masterId)
                     .Include(r => r.Movie)
+                    .OrderByDescending(r => r.Score)
                     .Select(r => new AdminRatingDto(
                         r.MovieId,
                         r.Movie!.TmdbId,
@@ -261,33 +268,45 @@ namespace MyMoviesApp.Api.Controllers
                         r.Movie!.PosterUrl,
                         r.Score
                     ))
-                    .OrderByDescending(r => r.Score)
+                    // *** Removed .Take(10) so we return all Glarky’s ratings ***
                     .ToListAsync();
 
-                return Ok(adminRatings);
+                return Ok(masterRatings);
             }
             catch
             {
-                // If anything fails (DB down, etc.), return an empty array rather than 500
                 return Ok(Array.Empty<AdminRatingDto>());
             }
         }
 
+        // 5) GET /api/movies/trending
+        //    Returns TMDb’s daily trending movies. We assign MovieId = parsed TMDb ID.
         [HttpGet("trending")]
         public async Task<IActionResult> GetTrending()
         {
             try
             {
                 var tmdbResults = await _tmdb.GetTrendingMoviesAsync();
+
+                // For each trending result, parse the TmdbId string to an integer:
                 var trending = tmdbResults
-                    .Select(r => new TrendingDto(
-                        0,
-                        r.TmdbId,
-                        r.Title,
-                        r.PosterPath,
-                        0.0,
-                        0
-                    ))
+                    .Select(r =>
+                    {
+                        int parsedId = 0;
+                        if (!int.TryParse(r.TmdbId, out parsedId))
+                        {
+                            parsedId = 0;
+                        }
+
+                        return new TrendingDto(
+                            parsedId,         // Used as the route ID when clicking
+                            r.TmdbId,
+                            r.Title,
+                            r.PosterPath,
+                            0.0,
+                            0
+                        );
+                    })
                     .ToList();
 
                 return Ok(trending);

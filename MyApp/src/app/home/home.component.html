@@ -1,88 +1,84 @@
-<!-- File: MyApp/src/app/home/home.component.html -->
+<div class="pt-16 bg-gradient-to-br from-gray-800 to-gray-900 text-white min-h-screen">
 
-<div class="pt-16 bg-gradient-to-br from-gray-800 to-gray-900 text-white min-h-screen p-4 space-y-12">
+  <!-- ---------------------------------------- -->
+  <!-- Redesigned Hero Banner (no hard crop)  -->
+  <!-- ---------------------------------------- -->
+  <div class="hero-image-container relative w-full">
+    <!--
+      The <img> now uses height:auto so it displays fully (no cropping).
+      We then place a semi-transparent black overlay on top to blend the edges
+      into the dark page background.
+    -->
+    <img src="assets/hero.jpg"
+         alt="Gorilla Hero"
+         class="hero-image" />
 
-  <!-- Hero (static image) -->
-  <div class="relative w-full h-64 md:h-80 lg:h-96 rounded-lg overflow-hidden">
-    <img src="assets/hero.jpg" alt="Gorilla Hero"
-         class="w-full h-full object-cover object-center" />
-    <div class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-      <h1 class="text-4xl md:text-5xl font-extrabold">Welcome to MovieGorilla</h1>
+    <!-- Black overlay with 40% opacity, centered text -->
+    <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+      <h1 class="text-4xl md:text-5xl font-extrabold text-white">
+        Welcome to MovieGorilla
+      </h1>
     </div>
   </div>
 
-  <!-- Glarky's Top Picks -->
-  <section>
-    <h2 class="text-3xl font-bold mb-4">Glarky’s Top Picks</h2>
+  <!-- ---------------------------------------- -->
+  <!-- Glarky’s Top Picks (unchanged)          -->
+  <!-- ---------------------------------------- -->
+  <section class="p-4 space-y-4">
+    <h2 class="text-3xl font-bold">Glarky’s Top Picks</h2>
 
+    <!-- Loading placeholder -->
     <div *ngIf="loadingFeatured" class="text-gray-400">Loading…</div>
 
-    <div *ngIf="!loadingFeatured">
-      <!-- If no movies were returned -->
-      <div *ngIf="featured.length === 0" class="text-gray-500">
-        No top picks available.
-      </div>
+    <!-- No picks message -->
+    <div *ngIf="!loadingFeatured && featured.length === 0"
+         class="text-gray-400">
+      No top picks available.
+    </div>
 
-      <div *ngIf="featured.length > 0" class="flex space-x-4 overflow-x-auto pb-2">
-        <div *ngFor="let f of featured"
-             class="min-w-[180px] cursor-pointer transform hover:scale-105 transition"
-             (click)="viewMovie(f.movieId, f.tmdbId)">
-          <img [src]="'https://image.tmdb.org/t/p/w500' + f.posterUrl"
-               alt="{{ f.title }}"
-               class="w-full h-44 object-cover rounded-lg shadow-lg" />
-          <div class="mt-2 text-center">
-            <h3 class="font-medium text-white">{{ f.title }}</h3>
-            <p class="text-sm text-gray-300">Score: {{ f.score }}/100</p>
-          </div>
+    <!-- Horizontal scroll of featured cards -->
+    <div *ngIf="featured.length > 0"
+         class="flex space-x-4 overflow-x-auto pb-2">
+      <div *ngFor="let f of featured"
+           class="min-w-[180px] cursor-pointer transform hover:scale-105 transition"
+           (click)="viewMovie(f.movieId)">
+        <img [src]="imageBaseUrl + f.posterUrl"
+             alt="{{ f.title }}"
+             class="w-full h-44 object-cover rounded-lg shadow-lg" />
+        <div class="mt-2 text-center">
+          <h3 class="font-medium">{{ f.title }}</h3>
+          <p class="text-sm text-gray-300">Score: {{ f.score }}/100</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Trending Now -->
-  <section>
-    <h2 class="text-3xl font-bold mb-4">Trending Now</h2>
+  <!-- ---------------------------------------- -->
+  <!-- Trending Now (TMDb)                     -->
+  <!-- ---------------------------------------- -->
+  <section class="p-4 space-y-4">
+    <h2 class="text-3xl font-bold">Trending Now</h2>
 
+    <!-- Loading placeholder -->
     <div *ngIf="loadingTrending" class="text-gray-400">Loading…</div>
 
-    <div *ngIf="!loadingTrending">
-      <!-- If no trending results -->
-      <div *ngIf="trending.length === 0" class="text-gray-500">
-        No trending movies available.
-      </div>
-
-      <div *ngIf="trending.length > 0"
-           class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
-        <div *ngFor="let t of trending"
-             class="cursor-pointer transform hover:scale-105 transition"
-             (click)="viewMovie(t.movieId, t.tmdbId)">
-          <img [src]="'https://image.tmdb.org/t/p/w500' + t.posterUrl"
-               alt="{{ t.title }}"
-               class="w-full h-32 object-cover rounded-lg shadow-lg" />
-          <div class="mt-1 text-center">
-            <h3 class="text-sm font-medium text-white">{{ t.title }}</h3>
-          </div>
+    <!-- Grid of trending cards -->
+    <div *ngIf="!loadingTrending"
+         class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+      <div *ngFor="let t of trending"
+           class="cursor-pointer transform hover:scale-105 transition"
+           (click)="viewMovie(t.movieId)">
+        <img [src]="imageBaseUrl + t.posterUrl"
+             alt="{{ t.title }}"
+             class="w-full h-32 object-cover rounded-lg shadow-lg" />
+        <div class="mt-1 text-center">
+          <h3 class="text-sm font-medium">{{ t.title }}</h3>
+          <p class="text-xs text-gray-300">
+            {{ t.averageRating }}/100 • ({{ t.ratingCount }})
+          </p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Show any error message -->
-  <div *ngIf="errorMsg" class="text-red-500 mt-4">{{ errorMsg }}</div>
-
-  <!-- Quick Links -->
-  <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
-    <button (click)="router.navigate(['/watchlist'])"
-            class="bg-green-600 text-white rounded py-4 shadow hover:bg-opacity-90 font-semibold">
-      My Watchlist
-    </button>
-    <button (click)="router.navigate(['/movies'])"
-            class="bg-yellow-500 text-black rounded py-4 shadow hover:opacity-90 font-semibold">
-      Browse All Movies
-    </button>
-    <button (click)="router.navigate(['/recommendations'])"
-            class="bg-blue-600 text-white rounded py-4 shadow hover:bg-opacity-90 font-semibold">
-      AI Recommendations
-    </button>
-  </section>
 </div>

@@ -1,59 +1,65 @@
-// File: MyApp/src/app/home/home.component.ts
-
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
-import { HomeService, AdminRating, TrendingDto } from './home.service';
+import { HomeService, AdminRating, TrendingMovie } from './home.service';
 
 @Component({
   standalone: true,
   selector: 'app-home',
-  imports: [CommonModule, RouterModule],
+  imports: [
+    CommonModule,    // Provides *ngIf, *ngFor, etc.
+    RouterModule
+  ],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.css']
 })
 export class HomeComponent implements OnInit {
+  // This will hold your personal top-rated movies
   featured: AdminRating[] = [];
-  trending: TrendingDto[] = [];
+
+  // TMDb trending movies
+  trending: TrendingMovie[] = [];
+
+  // Loading indicators
   loadingFeatured = true;
   loadingTrending = true;
-  errorMsg = '';
 
-  // Make router public so the template can access it
-  constructor(private homeSvc: HomeService, public router: Router) { }
+  // Generic error message
+  error = '';
+
+  // Base URL for poster images from TMDb
+  imageBaseUrl = 'https://image.tmdb.org/t/p/w500';
+
+  constructor(private homeSvc: HomeService, private router: Router) { }
 
   ngOnInit(): void {
-    // Fetch Glarky’s Top Picks
+    // 1) Load “Glarky’s Top Picks” from your personal ratings
     this.homeSvc.getAdminRatings().subscribe({
-      next: data => {
+      next: (data) => {
         this.featured = data;
         this.loadingFeatured = false;
       },
       error: () => {
-        this.errorMsg = 'Unable to load Glarky’s Top Picks.';
+        this.error = 'Failed to load Glarky’s Top Picks.';
         this.loadingFeatured = false;
       }
     });
 
-    // Fetch Trending Now
+    // 2) Load TMDb “Trending Now”
     this.homeSvc.getTrending().subscribe({
-      next: data => {
+      next: (data) => {
         this.trending = data;
         this.loadingTrending = false;
       },
       error: () => {
-        this.errorMsg = 'Unable to load Trending Now.';
+        this.error = 'Failed to load Trending Movies.';
         this.loadingTrending = false;
       }
     });
   }
 
-  viewMovie(movieId: number, tmdbId: string): void {
-    if (movieId && movieId > 0) {
-      this.router.navigate(['/movies', movieId]);
-    } else {
-      // fallback: open TMDb page in new tab
-      window.open(`https://www.themoviedb.org/movie/${tmdbId}`, '_blank');
-    }
+  // When user clicks a card, navigate to /movies/{id}
+  viewMovie(id: number): void {
+    this.router.navigate(['/movies', id]);
   }
 }

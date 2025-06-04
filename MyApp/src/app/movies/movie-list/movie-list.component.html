@@ -1,54 +1,98 @@
 <div class="pt-20 p-4 space-y-4">
-  <!-- Filters / Search -->
-  <form (ngSubmit)="applyFilters()" class="flex flex-wrap gap-2 items-end">
-    <div>
-      <label>Title Contains:</label>
-      <input type="text" [(ngModel)]="searchText" name="searchText"
-             class="border p-1 rounded w-48" placeholder="Search by title" />
+
+  <!-- ===================================== -->
+  <!--   FILTER & SEARCH ROW (restyled)      -->
+  <!-- ===================================== -->
+  <form (ngSubmit)="applyFilters()" class="flex flex-wrap gap-4 items-end mb-4">
+    <!-- Title Contains -->
+    <div class="flex flex-col">
+      <label class="text-sm text-gray-200" for="titleQuery">Title Contains:</label>
+      <input id="titleQuery"
+             name="titleQuery"
+             [(ngModel)]="titleQuery"
+             type="text"
+             placeholder="Search by title"
+             class="mt-1 px-3 py-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500" />
     </div>
-    <div>
-      <label>Min Avg. Rating:</label>
-      <input type="number" [(ngModel)]="minRating" name="minRating"
-             class="border p-1 w-20 rounded" />
+
+    <!-- Min Rating -->
+    <div class="flex flex-col">
+      <label class="text-sm text-gray-200" for="minRating">Min Rating:</label>
+      <input id="minRating"
+             name="minRating"
+             [(ngModel)]="minRating"
+             type="number"
+             min="0"
+             max="100"
+             placeholder="0"
+             class="mt-1 w-20 px-3 py-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500" />
     </div>
-    <div>
-      <label>Max Avg. Rating:</label>
-      <input type="number" [(ngModel)]="maxRating" name="maxRating"
-             class="border p-1 w-20 rounded" />
+
+    <!-- Max Rating -->
+    <div class="flex flex-col">
+      <label class="text-sm text-gray-200" for="maxRating">Max Rating:</label>
+      <input id="maxRating"
+             name="maxRating"
+             [(ngModel)]="maxRating"
+             type="number"
+             min="0"
+             max="100"
+             placeholder="100"
+             class="mt-1 w-20 px-3 py-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500" />
     </div>
-    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-      Apply
-    </button>
+
+    <!-- Apply Button -->
+    <div class="flex flex-col">
+      <button type="submit"
+              class="mt-6 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
+        Apply
+      </button>
+    </div>
   </form>
 
-  <!-- Movie Grid -->
+  <!-- =================================== -->
+  <!--   MOVIE GRID (with Glarky’s Score)  -->
+  <!-- =================================== -->
   <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
     <ng-container *ngFor="let m of movies">
       <a [routerLink]="['/movies', m.movieId]"
-         class="block bg-gray-800 text-white rounded overflow-hidden hover:bg-gray-700 transition">
+         class="block bg-gray-800 text-white rounded overflow-hidden hover:bg-gray-700 transition shadow-lg">
         <img [src]="imageBaseUrl + m.posterUrl"
              alt="{{ m.title }}"
              class="w-full h-40 object-cover" />
         <div class="p-2">
           <h3 class="font-semibold">{{ m.title }}</h3>
-          <p class="text-sm text-gray-400">{{ m.averageRating }}/100 ({{ m.ratingCount }})</p>
+          <p class="text-sm text-gray-400 mt-1">
+            <span *ngIf="adminRatingsMap[m.movieId] !== undefined">
+              {{ adminRatingsMap[m.movieId] }}/100
+            </span>
+            <span *ngIf="adminRatingsMap[m.movieId] === undefined">—/100</span>
+          </p>
         </div>
       </a>
     </ng-container>
   </div>
 
-  <!-- Pagination Controls -->
-  <div class="flex justify-center items-center space-x-4 mt-4">
-    <button (click)="prevPage()" [disabled]="page <= 1"
-            class="px-3 py-1 bg-gray-600 rounded disabled:opacity-50 text-white">
-      Previous
-    </button>
-    <span>Page {{ page }} of {{ totalPages }}</span>
-    <button (click)="nextPage()" [disabled]="page >= totalPages"
-            class="px-3 py-1 bg-gray-600 rounded disabled:opacity-50 text-white">
-      Next
-    </button>
-  </div>
+  <!-- ========================================= -->
+  <!--   PAGINATION CONTROLS (if not searching)  -->
+  <!-- ========================================= -->
+  <!-- Only show pagination if not in “search” mode -->
+  <ng-container *ngIf="!titleQuery || titleQuery.trim() === ''">
+    <div class="flex justify-center items-center space-x-4 mt-6">
+      <button (click)="prevPage()"
+              [disabled]="page <= 1"
+              class="px-3 py-1 bg-gray-600 rounded disabled:opacity-50 text-white hover:bg-gray-500 transition">
+        Previous
+      </button>
+      <span class="text-gray-200">Page {{ page }} of {{ totalPages }}</span>
+      <button (click)="nextPage()"
+              [disabled]="page >= totalPages"
+              class="px-3 py-1 bg-gray-600 rounded disabled:opacity-50 text-white hover:bg-gray-500 transition">
+        Next
+      </button>
+    </div>
+  </ng-container>
 
-  <p *ngIf="error" class="text-red-500 text-center">{{ error }}</p>
+  <!-- Error Message -->
+  <p *ngIf="error" class="text-red-500 text-center mt-4">{{ error }}</p>
 </div>

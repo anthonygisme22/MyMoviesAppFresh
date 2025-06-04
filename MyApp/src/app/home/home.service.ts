@@ -1,8 +1,7 @@
-// File: MyApp/src/app/home/home.service.ts
-
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface AdminRating {
   movieId: number;
@@ -12,7 +11,7 @@ export interface AdminRating {
   score: number;
 }
 
-export interface TrendingDto {
+export interface TrendingMovie {
   movieId: number;
   tmdbId: string;
   title: string;
@@ -23,8 +22,7 @@ export interface TrendingDto {
 
 @Injectable({ providedIn: 'root' })
 export class HomeService {
-  // Force the full URL so we don’t accidentally hit index.html
-  private baseUrl = 'http://localhost:5091/api/movies';
+  private baseUrl = `${environment.apiUrl}/api/movies`;
 
   constructor(private http: HttpClient) { }
 
@@ -32,7 +30,7 @@ export class HomeService {
     return this.http.get<AdminRating[]>(`${this.baseUrl}/admin-ratings`);
   }
 
-  getTrending(): Observable<TrendingDto[]> {
-    return this.http.get<TrendingDto[]>(`${this.baseUrl}/trending`);
+  getTrending(): Observable<TrendingMovie[]> {
+    return this.http.get<TrendingMovie[]>(`${this.baseUrl}/trending`);
   }
 }

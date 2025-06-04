@@ -1,6 +1,26 @@
-/* File: MyApp/src/app/home/home.component.css */
+/* ---------------------------------------- */
+/* 1) Hero banner image container no longer */
+/*    crops its contents—height is auto.    */
+/* ---------------------------------------- */
+.hero-image-container {
+  position: relative;
+  width: 100%;
+}
 
-/* Hide horizontal scrollbar but keep scrolling enabled */
+/* ---------------------------------------- */
+/* 2) The image itself fills the width,    */
+/*    height:auto so nothing is cut off.   */
+/* ---------------------------------------- */
+.hero-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ---------------------------------------- */
+/* 3) Scrollbar styling for featured row    */
+/*    (if it overflows horizontally).       */
+/* ---------------------------------------- */
 ::-webkit-scrollbar {
   height: 0.25rem;
 }

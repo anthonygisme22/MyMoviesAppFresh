@@ -1,12 +1,13 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { Observable } from 'rxjs';
-import { AuthService } from '../auth/auth.service';
 
 //
-// 1) Movie browsing (anonymous)
+// ─── TYPES EXPORTED FOR OTHER COMPONENTS ─────────────────────────────────────
 //
+
+// Movie returned by paged listing or search
 export interface Movie {
   movieId: number;
   tmdbId: string;
@@ -14,7 +15,12 @@ export interface Movie {
   posterUrl: string;
   averageRating: number;
   ratingCount: number;
-  masterRating?: number; // Glarky’s rating if available
+}
+
+// Detailed movie (used by MovieDetailComponent)
+export interface CastMember {
+  name: string;
+  character: string;
 }
 
 export interface MovieDetail {
@@ -23,44 +29,12 @@ export interface MovieDetail {
   title: string;
   posterUrl: string;
   overview: string;
-  cast: { name: string; character: string }[];
-  userRating?: number;
-  masterRating?: number;
+  cast: CastMember[];
+  userRating?: number;   // logged-in user’s rating
+  masterRating?: number; // Glarky’s (admin) rating
 }
 
-export interface WatchlistItem {
-  watchlistItemId: number;
-  movie: Movie;
-  addedAt: string;
-}
-
-export interface CastMember {
-  name: string;
-  character: string;
-}
-
-export interface PagedResponse<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
-
-//
-// DTOs for ratings & recommendations
-//
-export interface RatingDto {
-  movieId: number;
-  score: number;
-  username: string;
-}
-
-export interface RecommendationDto {
-  title: string;
-  reason: string;
-}
-
-// Admin‐side Glarky’s picks type (returns full movie info + score)
+// For displaying “Glarky’s Top Picks” in AdminRatingsComponent
 export interface AdminRatingDto {
   movieId: number;
   tmdbId: string;
@@ -69,134 +43,197 @@ export interface AdminRatingDto {
   score: number;
 }
 
+// For displaying user’s own ratings in ProfileComponent
+export interface RatingDto {
+  movieId: number;
+  score: number;
+  username: string;
+}
+
+// The shape returned by the paged GET /api/movies endpoint
+export interface PagedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+// A watchlist entry (used in WatchlistComponent)
+export interface WatchlistItem {
+  watchlistItemId: number;
+  movie: Movie;
+  addedAt: string;
+}
+
+// AI Recommendation DTO (used in RecommendationsComponent)
+export interface RecommendationDto {
+  title: string;
+  reason: string;
+}
+
+//
+// ─── SERVICE IMPLEMENTATION ────────────────────────────────────────────────────
+//
 @Injectable({ providedIn: 'root' })
 export class MovieService {
   private baseUrl = `${environment.apiUrl}/api/movies`;
   private watchlistUrl = `${environment.apiUrl}/api/watchlist`;
   private ratingsUrl = `${environment.apiUrl}/api/ratings`;
-  private adminUrl = `${environment.apiUrl}/api/admin-ratings`;
-  private recUrl = `${environment.apiUrl}/api/recommendations`;
+  private adminRatingsUrl = `${environment.apiUrl}/api/admin-ratings`;
+  private recommendationsUrl = `${environment.apiUrl}/api/recommendations`;
 
-  constructor(
-    private http: HttpClient,
-    private auth: AuthService
-  ) { }
+  constructor(private http: HttpClient) { }
 
-  // --------------------------------------
-  // 1) Public Browsing Endpoints (No token)
-  // --------------------------------------
+  //
+  // ─── BROWSE / SEARCH / PAGINATION ────────────────────────────────────────────
+  //
 
+  /**
+   * GET /api/movies?page=&pageSize=&minRating=&maxRating=
+   * Returns a paged list of Movie (with averageRating and ratingCount).
+   */
   getMovies(
     page: number,
     pageSize: number,
     minRating?: number,
-    maxRating?: number,
-    search?: string
+    maxRating?: number
   ): Observable<PagedResponse<Movie>> {
     let params = new HttpParams()
       .set('page', page.toString())
       .set('pageSize', pageSize.toString());
 
-    if (minRating != null) params = params.set('minRating', minRating.toString());
-    if (maxRating != null) params = params.set('maxRating', maxRating.toString());
-    if (search) params = params.set('search', search);
+    if (minRating != null) {
+      params = params.set('minRating', minRating.toString());
+    }
+    if (maxRating != null) {
+      params = params.set('maxRating', maxRating.toString());
+    }
 
     return this.http.get<PagedResponse<Movie>>(this.baseUrl, { params });
   }
 
-  getMovieById(movieId: number): Observable<MovieDetail> {
-    // This endpoint requires authentication
-    const headers = this.buildAuthHeaders();
-    return this.http.get<MovieDetail>(`${this.baseUrl}/${movieId}`, { headers });
-  }
-
-  // --------------------------------------
-  // 2) Watchlist (requires token)
-  // --------------------------------------
-
-  getWatchlist(): Observable<WatchlistItem[]> {
-    const headers = this.buildAuthHeaders();
-    return this.http.get<WatchlistItem[]>(this.watchlistUrl, { headers });
-  }
-
-  addToWatchlist(movieId: number): Observable<any> {
-    const headers = this.buildAuthHeaders();
-    return this.http.post(this.watchlistUrl, { MovieId: movieId }, { headers });
-  }
-
-  removeFromWatchlist(movieId: number): Observable<any> {
-    const headers = this.buildAuthHeaders();
-    return this.http.delete(`${this.watchlistUrl}/${movieId}`, { headers });
-  }
-
-  // --------------------------------------
-  // 3) User Ratings (requires token)
-  // --------------------------------------
-
-  rateMovie(movieId: number, score: number): Observable<RatingDto> {
-    const headers = this.buildAuthHeaders();
-    return this.http.post<RatingDto>(this.ratingsUrl, { MovieId: movieId, Score: score }, { headers });
-  }
-
-  removeRating(movieId: number): Observable<any> {
-    const userId = this.getUserId();
-    const headers = this.buildAuthHeaders();
-    return this.http.delete(`${this.ratingsUrl}/user/${userId}/movie/${movieId}`, { headers });
-  }
-
-  getUserRatings(userId: number): Observable<RatingDto[]> {
-    const headers = this.buildAuthHeaders();
-    return this.http.get<RatingDto[]>(`${this.ratingsUrl}/user/${userId}`, { headers });
-  }
-
-  // --------------------------------------
-  // 4) Admin/Glarky’s Picks (requires token, Admin role)
-  // --------------------------------------
-
-  // Fetch Glarky’s current picks (full movie info + score)
-  getAdminRatings(): Observable<AdminRatingDto[]> {
-    const headers = this.buildAuthHeaders();
-    return this.http.get<AdminRatingDto[]>(`${this.baseUrl}/admin-ratings`, { headers });
-  }
-
-  // Upsert (create/update) a Glarky’s rating
-  upsertAdminRating(movieId: number, score: number): Observable<AdminRatingDto> {
-    const headers = this.buildAuthHeaders();
-    return this.http.post<AdminRatingDto>(this.adminUrl, { MovieId: movieId, Score: score }, { headers });
-  }
-
-  // --------------------------------------
-  // 5) AI Recommendations (requires token)
-  // --------------------------------------
-
-  getRecommendations(prompt: string): Observable<RecommendationDto[] | { rawResponse: string }> {
-    const headers = this.buildAuthHeaders();
-    return this.http.post<RecommendationDto[] | { rawResponse: string }>(
-      this.recUrl,
-      { prompt },
-      { headers }
+  /**
+   * GET /api/movies/search?query=...
+   * Returns an array of Movie matching title (local + TMDb fallback).
+   */
+  search(query: string): Observable<Movie[]> {
+    return this.http.get<Movie[]>(
+      `${this.baseUrl}/search?query=${encodeURIComponent(query)}`
     );
   }
 
-  // --------------------------------------
-  // 6) Helpers
-  // --------------------------------------
+  //
+  // ─── MOVIE DETAILS ────────────────────────────────────────────────────────────
+  //
 
-  private buildAuthHeaders(): HttpHeaders {
-    const token = this.auth.getToken();
-    return token
-      ? new HttpHeaders({ Authorization: `Bearer ${token}` })
-      : new HttpHeaders();
+  /**
+   * GET /api/movies/{id}
+   * Returns MovieDetail (local + TMDb cast + userRating + masterRating).
+   */
+  getMovieById(id: number): Observable<MovieDetail> {
+    return this.http.get<MovieDetail>(`${this.baseUrl}/${id}`);
   }
 
+  //
+  // ─── USER WATCHLIST ───────────────────────────────────────────────────────────
+  //
+
+  /**
+   * GET /api/watchlist
+   * Returns WatchlistItem[] for the logged‐in user.
+   */
+  getWatchlist(): Observable<WatchlistItem[]> {
+    return this.http.get<WatchlistItem[]>(this.watchlistUrl);
+  }
+
+  /**
+   * POST /api/watchlist {MovieId}
+   * Adds a movie to the logged‐in user's watchlist.
+   */
+  addToWatchlist(movieId: number): Observable<any> {
+    return this.http.post(this.watchlistUrl, { MovieId: movieId });
+  }
+
+  /**
+   * DELETE /api/watchlist/{movieId}
+   * Removes a movie from the logged‐in user's watchlist.
+   */
+  removeFromWatchlist(movieId: number): Observable<any> {
+    return this.http.delete(`${this.watchlistUrl}/${movieId}`);
+  }
+
+  //
+  // ─── USER RATINGS ─────────────────────────────────────────────────────────────
+  //
+
+  /**
+   * POST /api/ratings { MovieId, Score }
+   * Upsert (create/update) a rating for the logged‐in user.
+   */
+  rateMovie(movieId: number, score: number): Observable<RatingDto> {
+    return this.http.post<RatingDto>(this.ratingsUrl, { MovieId: movieId, Score: score });
+  }
+
+  /**
+   * DELETE /api/ratings/user/{userId}/movie/{movieId}
+   * Removes the logged‐in user’s rating for that movie.
+   */
+  removeRating(movieId: number): Observable<any> {
+    return this.http.delete(`${this.ratingsUrl}/user/${this.getUserId()}/movie/${movieId}`);
+  }
+
+  /**
+   * GET /api/ratings/user/{userId}
+   * Returns all ratings by a specific user. Used in ProfileComponent.
+   */
+  getUserRatings(userId: number): Observable<RatingDto[]> {
+    return this.http.get<RatingDto[]>(`${environment.apiUrl}/api/ratings/user/${userId}`);
+  }
+
+  //
+  // ─── ADMIN (GLARKY) RATINGS ───────────────────────────────────────────────────
+  //
+
+  /**
+   * GET /api/admin-ratings
+   * Returns all of Glarky’s ratings (does not depend on logged‐in user).
+   */
+  getAdminRatings(): Observable<AdminRatingDto[]> {
+    return this.http.get<AdminRatingDto[]>(this.adminRatingsUrl);
+  }
+
+  /**
+   * POST /api/admin-ratings { movieId, score }
+   * Upsert (create/update) a master rating for Glarky (Admin).
+   */
+  upsertAdminRating(movieId: number, score: number): Observable<AdminRatingDto> {
+    return this.http.post<AdminRatingDto>(this.adminRatingsUrl, { movieId, score });
+  }
+
+  //
+  // ─── AI RECOMMENDATIONS ───────────────────────────────────────────────────────
+  //
+
+  /**
+   * POST /api/recommendations { prompt }
+   * Returns RecommendationDto[] from OpenAI.
+   */
+  getRecommendations(prompt: string): Observable<RecommendationDto[]> {
+    return this.http.post<RecommendationDto[]>(this.recommendationsUrl, { prompt });
+  }
+
+  //
+  // ─── HELPERS ──────────────────────────────────────────────────────────────────
+  //
+
+  // Read the JWT from local storage and parse “sub” as userId
   private getUserId(): number {
-    const token = this.auth.getToken();
-    if (!token) throw new Error('No token found');
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return Number(payload.sub);
-    } catch {
-      throw new Error('Invalid token');
-    }
+    const token = this.getToken()!;
+    return Number(JSON.parse(atob(token.split('.')[1])).sub);
+  }
+
+  // Retrieve the stored JWT
+  private getToken(): string | null {
+    return localStorage.getItem('token');
   }
 }
