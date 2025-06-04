@@ -7,21 +7,34 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- EF / PostgreSQL if you need them -->
+    <!-- EF / PostgreSQL & config packages -->
     <PackageReference Include="Azure.AI.OpenAI" Version="2.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.5" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
 
     <!-- CSVHelper if needed -->
     <PackageReference Include="CsvHelper" Version="27.2.1" />
-
-    <!-- Now we have 2.0.0 explicitly -->
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MyMoviesApp.Core\MyMoviesApp.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Copy the API’s appsettings.json into this project output folder at build time -->
+  <ItemGroup>
+    <None Include="..\MyMoviesApp.Api\appsettings.json">
+      <Link>appsettings.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\MyMoviesApp.Api\appsettings.Development.json">
+      <Link>appsettings.Development.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
