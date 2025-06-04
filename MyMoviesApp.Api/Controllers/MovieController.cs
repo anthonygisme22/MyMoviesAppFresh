@@ -1,4 +1,6 @@
-﻿using System;
+﻿// File: MyMoviesApp.Api/Controllers/MovieController.cs
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -185,7 +187,13 @@ namespace MyMoviesApp.Api.Controllers
                     .Select(r => (int?)r.Score)
                     .FirstOrDefaultAsync();
 
-                var masterId = _config.GetValue<int>("MasterUserId");
+                // If MasterUserId is missing or invalid, default to 1
+                int masterId = 1;
+                if (!int.TryParse(_config["MasterUserId"], out masterId))
+                {
+                    masterId = 1;
+                }
+
                 var masterRating = await _db.Ratings
                     .Where(r => r.UserId == masterId && r.MovieId == id)
                     .Select(r => (int?)r.Score)
@@ -234,40 +242,60 @@ namespace MyMoviesApp.Api.Controllers
         [HttpGet("admin-ratings")]
         public async Task<IActionResult> GetAdminRatings()
         {
-            var masterId = _config.GetValue<int>("MasterUserId");
+            // Safely parse MasterUserId; default to 1 if missing/invalid
+            int masterId = 1;
+            if (!int.TryParse(_config["MasterUserId"], out masterId))
+            {
+                masterId = 1;
+            }
 
-            var adminRatings = await _db.Ratings
-                .Where(r => r.UserId == masterId)
-                .Include(r => r.Movie)
-                .Select(r => new AdminRatingDto(
-                    r.MovieId,
-                    r.Movie!.TmdbId,
-                    r.Movie!.Title,
-                    r.Movie!.PosterUrl,
-                    r.Score
-                ))
-                .OrderByDescending(r => r.Score)
-                .ToListAsync();
+            try
+            {
+                var adminRatings = await _db.Ratings
+                    .Where(r => r.UserId == masterId)
+                    .Include(r => r.Movie)
+                    .Select(r => new AdminRatingDto(
+                        r.MovieId,
+                        r.Movie!.TmdbId,
+                        r.Movie!.Title,
+                        r.Movie!.PosterUrl,
+                        r.Score
+                    ))
+                    .OrderByDescending(r => r.Score)
+                    .ToListAsync();
 
-            return Ok(adminRatings);
+                return Ok(adminRatings);
+            }
+            catch
+            {
+                // If anything fails (DB down, etc.), return an empty array rather than 500
+                return Ok(Array.Empty<AdminRatingDto>());
+            }
         }
 
         [HttpGet("trending")]
         public async Task<IActionResult> GetTrending()
         {
-            var tmdbResults = await _tmdb.GetTrendingMoviesAsync();
-            var trending = tmdbResults
-                .Select(r => new TrendingDto(
-                    0,
-                    r.TmdbId,
-                    r.Title,
-                    r.PosterPath,
-                    0.0,
-                    0
-                ))
-                .ToList();
+            try
+            {
+                var tmdbResults = await _tmdb.GetTrendingMoviesAsync();
+                var trending = tmdbResults
+                    .Select(r => new TrendingDto(
+                        0,
+                        r.TmdbId,
+                        r.Title,
+                        r.PosterPath,
+                        0.0,
+                        0
+                    ))
+                    .ToList();
 
-            return Ok(trending);
+                return Ok(trending);
+            }
+            catch
+            {
+                return StatusCode(502, "Failed to fetch TMDb trending data.");
+            }
         }
     }
 }
