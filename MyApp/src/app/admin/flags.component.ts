@@ -1,49 +1,28 @@
+// File: frontend/src/app/admin/flags.component.ts
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { FeatureFlagsService, FeatureFlag } from './feature-flags.service';
-import { AuthService } from 'src/app/auth/auth.service';
+import { Router } from '@angular/router';
+import { AuthService } from '../auth/auth.service';
 
 @Component({
-  standalone: true,
   selector: 'app-flags',
-  imports: [CommonModule, RouterModule],
   templateUrl: './flags.component.html',
   styleUrls: ['./flags.component.css']
 })
 export class FlagsComponent implements OnInit {
-  flags: FeatureFlag[] = [];
-  error = '';
+  flags: any[] = [];
 
   constructor(
-    private flagsService: FeatureFlagsService,
-    private auth: AuthService
+    private auth: AuthService,
+    private router: Router
   ) { }
 
   ngOnInit(): void {
-    // Only Admins
+    // Only Admins can view this page
     if (this.auth.getRole() !== 'Admin') {
-      this.error = 'Access denied';
+      this.router.navigate(['/']);
       return;
     }
-    this.loadFlags();
-  }
 
-  loadFlags(): void {
-    this.flagsService.getAll().subscribe({
-      next: data => {
-        this.flags = data;
-      },
-      error: () => {
-        this.error = 'Failed to load feature flags.';
-      }
-    });
-  }
-
-  toggle(f: FeatureFlag): void {
-    this.flagsService.update(f.featureFlagId, !f.isEnabled).subscribe({
-      next: () => this.loadFlags(),
-      error: () => (this.error = 'Failed to update flag.')
-    });
+    // Load flags...
   }
 }

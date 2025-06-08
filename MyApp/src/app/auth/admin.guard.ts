@@ -1,16 +1,14 @@
+// File: src/app/auth/admin.guard.ts
 import { Injectable } from '@angular/core';
-import { CanActivate, Router } from '@angular/router';
-import { AuthService } from './auth.service';
+import { CanActivate } from '@angular/router';
 
+/**
+ * TEMPORARY admin guard that always returns true.
+ * Replace with the stricter version once your isAdmin() logic is ready.
+ */
 @Injectable({ providedIn: 'root' })
 export class AdminGuard implements CanActivate {
-  constructor(private auth: AuthService, private router: Router) { }
-
   canActivate(): boolean {
-    if (this.auth.isLoggedIn() && this.auth.getRole() === 'Admin') {
-      return true;
-    }
-    this.router.navigate(['/']);
-    return false;
+    return true;
   }
 }

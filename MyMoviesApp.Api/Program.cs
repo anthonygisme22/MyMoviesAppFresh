@@ -1,5 +1,4 @@
-﻿// File: MyMoviesApp.Api/Program.cs
-
+﻿// File: MyMoviesApp.Api/Program.cs   (FULL FILE)
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Rewrite;
@@ -9,167 +8,96 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using MyMoviesApp.Core.Interfaces;
+using MyMoviesApp.Core.Services;                // ← NEW
 using MyMoviesApp.Infrastructure.Data;
 using MyMoviesApp.Infrastructure.Integration.Tmdb;
 using MyMoviesApp.Infrastructure.Services;
+using System;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
-// ----------------------------------------------------------------------------------------------------
-// 1) Add CORS so the Angular dev server (http://localhost:4200) can call our API in development
-// ----------------------------------------------------------------------------------------------------
+// 1) CORS ----------------------------------------------------------------------
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngularDev", policy =>
-    {
-        policy
-            .WithOrigins("http://localhost:4200")
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-    });
+        policy.WithOrigins("http://localhost:4200")
+              .AllowAnyHeader()
+              .AllowAnyMethod());
 });
 
-// ----------------------------------------------------------------------------------------------------
-// 2) Register the PostgreSQL ApplicationDbContext (EF Core) using the connection string from appsettings.json
-// ----------------------------------------------------------------------------------------------------
+// 2) DbContext -----------------------------------------------------------------
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"))
-);
+    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
-// ----------------------------------------------------------------------------------------------------
-// 3) Register ITmdbService → TmdbService (calls TMDb API via HttpClient factory)
-// ----------------------------------------------------------------------------------------------------
-builder.Services
-    .AddHttpClient<ITmdbService, TmdbService>(client =>
-    {
-        client.BaseAddress = new Uri("https://api.themoviedb.org/3/");
-    });
+// 3) TMDB & other HTTP clients -------------------------------------------------
+builder.Services.AddHttpClient<ITmdbService, TmdbService>(c =>
+    c.BaseAddress = new Uri("https://api.themoviedb.org/3/"));
 
-// ----------------------------------------------------------------------------------------------------
-// 4) Register IOpenAiService → OpenAiService (calls OpenAI via HttpClient factory)
-// ----------------------------------------------------------------------------------------------------
-builder.Services
-    .AddHttpClient<IOpenAiService, OpenAiService>(client =>
-    {
-        client.BaseAddress = new Uri("https://api.openai.com/v1/");
-    });
+builder.Services.AddHttpClient<IOpenAiService, OpenAiService>(c =>
+    c.BaseAddress = new Uri("https://api.openai.com/v1/"));
 
-// ----------------------------------------------------------------------------------------------------
-// 5) Register IRatingService → RatingService (our implementation in Infrastructure)
-// ----------------------------------------------------------------------------------------------------
+// 4) Domain services -----------------------------------------------------------
 builder.Services.AddScoped<IRatingService, RatingService>();
+builder.Services.AddScoped<IMasterRatingService, MasterRatingService>();   // ← NEW
 
-// ----------------------------------------------------------------------------------------------------
-// 6) Configure JWT Authentication (reads Jwt:Key, Issuer, Audience from appsettings.json)
-// ----------------------------------------------------------------------------------------------------
-var jwtKey = configuration["Jwt:Key"];
-var jwtIssuer = configuration["Jwt:Issuer"];
-var jwtAudience = configuration["Jwt:Audience"];
-if (string.IsNullOrWhiteSpace(jwtKey) ||
-    string.IsNullOrWhiteSpace(jwtIssuer) ||
-    string.IsNullOrWhiteSpace(jwtAudience))
-{
-    throw new InvalidOperationException("Missing JWT configuration in appsettings.json");
-}
+// 5) Authentication ------------------------------------------------------------
+var key = configuration["Jwt:Key"] ?? throw new InvalidOperationException("Missing Jwt:Key");
+var issuer = configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Missing Jwt:Issuer");
+var audience = configuration["Jwt:Audience"] ?? throw new InvalidOperationException("Missing Jwt:Audience");
 
-var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
 builder.Services
-    .AddAuthentication(options =>
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(opts =>
     {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
+        opts.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(keyBytes)
+            ValidIssuer = issuer,
+            ValidAudience = audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key))
         };
     });
 
-// ----------------------------------------------------------------------------------------------------
-// 7) Add Controllers + Swagger (so API endpoints work and Swagger UI is available in Development)
-// ----------------------------------------------------------------------------------------------------
+// 6) Controllers & Swagger -----------------------------------------------------
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// ----------------------------------------------------------------------------------------------------
-// 8) In Development: Auto‐apply EF Core migrations, enable Swagger UI
-// ----------------------------------------------------------------------------------------------------
+// 7) Dev helpers ---------------------------------------------------------------
 if (app.Environment.IsDevelopment())
 {
-    // Auto‐apply pending EF Migrations
-    using (var scope = app.Services.CreateScope())
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        db.Database.Migrate();
-    }
+    using var scope = app.Services.CreateScope();
+    scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
 
-    // Enable Swagger & Swagger UI
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// ----------------------------------------------------------------------------------------------------
-// 9) Configure middleware pipeline
-//
-//   - UseHttpsRedirection: redirect HTTP → HTTPS (note: in Azure this may be offloaded, but it’s safe to keep)
-//   - UseStaticFiles: serve the files in wwwroot (our Angular build) as static content
-//   - UseDefaultFiles: serves index.html by default if no file is specified
-//   - UseRewriter: catch‐all rewrite rule to redirect any non‐API path to index.html
-//   - UseRouting, UseCors, UseAuthentication, UseAuthorization, MapControllers
-// ----------------------------------------------------------------------------------------------------
+// 8) Pipeline ------------------------------------------------------------------
 app.UseHttpsRedirection();
-
-// Serve default files (index.html) and any static files from wwwroot:
-app.UseDefaultFiles();     // looks for index.html by default if no path is specified
+app.UseDefaultFiles();
 app.UseStaticFiles();
-
-// CORS policy for Angular dev (only applies if the origin matches)
 app.UseCors("AllowAngularDev");
-
-// Authentication / Authorization for API endpoints
 app.UseAuthentication();
 app.UseAuthorization();
-
-// Map API controllers under /api/*
 app.MapControllers();
 
-// ----------------------------------------------------------------------------------------------------
-// 10) Rewrite any non‐API request to serve index.html (so Angular client‐side routes work).
-//     We only want to rewrite if the request path does not start with “/api/”
-// ----------------------------------------------------------------------------------------------------
-var rewriteOptions = new RewriteOptions()
-    // If the request does not start with “/api” and is not calling an existing file,
-    // rewrite to “/index.html” so Angular’s router can take over.
-    .Add(context =>
+// Rewrite all non‑API paths to index.html for SPA routing
+app.UseRewriter(new RewriteOptions().Add(context =>
+{
+    var path = context.HttpContext.Request.Path.Value!;
+    if (!path.StartsWith("/api", StringComparison.OrdinalIgnoreCase) &&
+        !path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase) &&
+        !System.IO.Path.HasExtension(path))
     {
-        var requestPath = context.HttpContext.Request.Path.Value!;
+        context.HttpContext.Request.Path = "/index.html";
+    }
+}));
 
-        // If the request path starts with “/api” or “/swagger” or is for an actual file
-        // (e.g. *.js, *.css, *.png, etc.), do nothing. Otherwise, rewrite to “/index.html”.
-        if (!requestPath.StartsWith("/api", StringComparison.OrdinalIgnoreCase) &&
-            !requestPath.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase) &&
-            !System.IO.Path.HasExtension(requestPath))
-        {
-            context.Result = RuleResult.SkipRemainingRules;
-            context.HttpContext.Request.Path = "/index.html";
-        }
-    });
-
-app.UseRewriter(rewriteOptions);
-
-// ----------------------------------------------------------------------------------------------------
-// 11) Finally, run the application
-// ----------------------------------------------------------------------------------------------------
 app.Run();

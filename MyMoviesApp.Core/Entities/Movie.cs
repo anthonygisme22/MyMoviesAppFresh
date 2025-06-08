@@ -18,7 +18,7 @@ namespace MyMoviesApp.Core.Entities
         public string PosterUrl { get; set; }
         public double AverageRating { get; set; }
         public string Overview { get; set; }
-        public string ReleaseDate { get; set; }
+
 
         // Navigation property (Ratings table has a FK to Movies.MovieId)
         public List<Rating> Ratings { get; set; }

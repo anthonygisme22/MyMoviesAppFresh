@@ -62,4 +62,17 @@ export class AuthService {
       return null;
     }
   }
+
+  /** True if the JWT contains role === 'Admin' */
+  isAdmin(): boolean {
+    const t = localStorage.getItem('token');
+    if (!t) return false;
+    try {
+      const payload = JSON.parse(atob(t.split('.')[1]));
+      return payload.role === 'Admin';
+    } catch {
+      return false;
+    }
+  }
+
 }
