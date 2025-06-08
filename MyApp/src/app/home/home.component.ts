@@ -1,65 +1,55 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterModule } from '@angular/router';
 import { HomeService, AdminRating, TrendingMovie } from './home.service';
 
 @Component({
   standalone: true,
   selector: 'app-home',
-  imports: [
-    CommonModule,    // Provides *ngIf, *ngFor, etc.
-    RouterModule
-  ],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.css']
 })
 export class HomeComponent implements OnInit {
-  // This will hold your personal top-rated movies
-  featured: AdminRating[] = [];
 
-  // TMDb trending movies
+  featured: AdminRating[] = [];
   trending: TrendingMovie[] = [];
 
-  // Loading indicators
   loadingFeatured = true;
   loadingTrending = true;
 
-  // Generic error message
-  error = '';
-
-  // Base URL for poster images from TMDb
   imageBaseUrl = 'https://image.tmdb.org/t/p/w500';
+
+  searchTerm = '';
 
   constructor(private homeSvc: HomeService, private router: Router) { }
 
   ngOnInit(): void {
-    // 1) Load “Glarky’s Top Picks” from your personal ratings
+    /* Glarky’s picks */
     this.homeSvc.getAdminRatings().subscribe({
-      next: (data) => {
-        this.featured = data;
-        this.loadingFeatured = false;
-      },
-      error: () => {
-        this.error = 'Failed to load Glarky’s Top Picks.';
-        this.loadingFeatured = false;
-      }
+      next: d => { this.featured = d; this.loadingFeatured = false; },
+      error: () => this.loadingFeatured = false
     });
-
-    // 2) Load TMDb “Trending Now”
+    /* Trending */
     this.homeSvc.getTrending().subscribe({
-      next: (data) => {
-        this.trending = data;
-        this.loadingTrending = false;
-      },
-      error: () => {
-        this.error = 'Failed to load Trending Movies.';
-        this.loadingTrending = false;
-      }
+      next: d => { this.trending = d; this.loadingTrending = false; },
+      error: () => this.loadingTrending = false
     });
   }
 
-  // When user clicks a card, navigate to /movies/{id}
+  /** View details */
   viewMovie(id: number): void {
     this.router.navigate(['/movies', id]);
   }
+
+  /** Handle hero search */
+  doSearch(ev: Event): void {
+    ev.preventDefault();
+    if (!this.searchTerm.trim()) return;
+    this.router.navigate(['/movies'], { queryParams: { query: this.searchTerm } });
+  }
+
+  /** Utility for skeleton loops */
+  skeleton(n: number): number[] { return Array.from({ length: n }); }
 }

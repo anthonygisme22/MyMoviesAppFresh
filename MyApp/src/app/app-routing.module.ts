@@ -2,7 +2,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 
-/* ── Core/feature components ──────────────────────────────────────────────── */
+/* Core components */
 import { HomeComponent } from './home/home.component';
 import { LoginComponent } from './auth/login/login.component';
 import { RegisterComponent } from './auth/register/register.component';
@@ -14,11 +14,11 @@ import { RecommendationsComponent } from './recommendations/recommendations.comp
 import { FlagsComponent } from './admin/flags.component';
 import { AdminMoviesComponent } from './admin/admin-movies.component';
 
-/* ── Guards ──────────────────────────────────────────────────────────────── */
+/* Guards */
 import { AuthGuard } from './auth/auth.guard';
 import { AdminGuard } from './auth/admin.guard';
 
-/* ── Route definitions ───────────────────────────────────────────────────── */
+/* Route map */
 export const routes: Routes = [
   { path: '', component: HomeComponent },
   { path: 'login', component: LoginComponent },
@@ -26,12 +26,11 @@ export const routes: Routes = [
 
   { path: 'movies', component: MovieListComponent, canActivate: [AuthGuard] },
   { path: 'movies/:id', component: MovieDetailComponent, canActivate: [AuthGuard] },
-
   { path: 'watchlist', component: WatchlistComponent, canActivate: [AuthGuard] },
   { path: 'profile', component: ProfileComponent, canActivate: [AuthGuard] },
   { path: 'recommendations', component: RecommendationsComponent, canActivate: [AuthGuard] },
 
-  /* ── Admin‑only routes (lazy stand‑alone components) ───────────────────── */
+  /* Admin‑only pages */
   {
     path: 'admin/master-ratings',
     canActivate: [AdminGuard],
@@ -49,11 +48,9 @@ export const routes: Routes = [
   { path: 'admin/flags', component: FlagsComponent, canActivate: [AdminGuard] },
   { path: 'admin/movies', component: AdminMoviesComponent, canActivate: [AdminGuard] },
 
-  /* ── Fallback ──────────────────────────────────────────────────────────── */
   { path: '**', redirectTo: '' }
 ];
 
-/* ── Angular module wrapper ──────────────────────────────────────────────── */
 @NgModule({
   imports: [RouterModule.forRoot(routes, { bindToComponentInputs: true })],
   exports: [RouterModule]

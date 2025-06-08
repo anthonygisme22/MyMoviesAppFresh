@@ -1,31 +1,16 @@
-/* ---------------------------------------- */
-/* 1) Hero banner image container no longer */
-/*    crops its contents—height is auto.    */
-/* ---------------------------------------- */
-.hero-image-container {
-  position: relative;
-  width: 100%;
+/* Home‑page component‑scoped styles */
+
+/* ensure skeletons pulse */
+@keyframes pulse {
+  0%, 100% {
+    opacity: .6;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
-/* ---------------------------------------- */
-/* 2) The image itself fills the width,    */
-/*    height:auto so nothing is cut off.   */
-/* ---------------------------------------- */
-.hero-image {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* ---------------------------------------- */
-/* 3) Scrollbar styling for featured row    */
-/*    (if it overflows horizontally).       */
-/* ---------------------------------------- */
-::-webkit-scrollbar {
-  height: 0.25rem;
-}
-
-::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: 0.125rem;
+.animate-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
 }

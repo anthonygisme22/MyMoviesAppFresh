@@ -1,4 +1,8 @@
-﻿// File: MyMoviesApp.Api/Program.cs   (FULL FILE)
+﻿// File: MyMoviesApp.Api/Program.cs
+using System;
+using System.Linq;
+using System.Security.Claims;
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Rewrite;
@@ -8,50 +12,41 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using MyMoviesApp.Core.Interfaces;
-using MyMoviesApp.Core.Services;                // ← NEW
+using MyMoviesApp.Core.Services;
 using MyMoviesApp.Infrastructure.Data;
 using MyMoviesApp.Infrastructure.Integration.Tmdb;
 using MyMoviesApp.Infrastructure.Services;
-using System;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
-// 1) CORS ----------------------------------------------------------------------
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAngularDev", policy =>
-        policy.WithOrigins("http://localhost:4200")
-              .AllowAnyHeader()
-              .AllowAnyMethod());
-});
+/* 1 CORS */
+builder.Services.AddCors(o => o.AddPolicy("AllowAngularDev", p =>
+    p.WithOrigins("http://localhost:4200").AllowAnyHeader().AllowAnyMethod()));
 
-// 2) DbContext -----------------------------------------------------------------
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+/* 2 DbContext */
+builder.Services.AddDbContext<ApplicationDbContext>(opt =>
+    opt.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
-// 3) TMDB & other HTTP clients -------------------------------------------------
+/* 3 Http clients */
 builder.Services.AddHttpClient<ITmdbService, TmdbService>(c =>
     c.BaseAddress = new Uri("https://api.themoviedb.org/3/"));
-
 builder.Services.AddHttpClient<IOpenAiService, OpenAiService>(c =>
     c.BaseAddress = new Uri("https://api.openai.com/v1/"));
 
-// 4) Domain services -----------------------------------------------------------
+/* 4 Domain services */
 builder.Services.AddScoped<IRatingService, RatingService>();
-builder.Services.AddScoped<IMasterRatingService, MasterRatingService>();   // ← NEW
+builder.Services.AddScoped<IMasterRatingService, MasterRatingService>();
 
-// 5) Authentication ------------------------------------------------------------
-var key = configuration["Jwt:Key"] ?? throw new InvalidOperationException("Missing Jwt:Key");
-var issuer = configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Missing Jwt:Issuer");
-var audience = configuration["Jwt:Audience"] ?? throw new InvalidOperationException("Missing Jwt:Audience");
-
+/* 5 JWT auth */
+var key = configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key missing");
+var issuer = configuration["Jwt:Issuer"] ?? "MyMoviesApp";
+var audience = configuration["Jwt:Audience"] ?? "MyMoviesApp";
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(opts =>
+    .AddJwtBearer(o =>
     {
-        opts.TokenValidationParameters = new TokenValidationParameters
+        o.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
@@ -62,24 +57,40 @@ builder.Services
         };
     });
 
-// 6) Controllers & Swagger -----------------------------------------------------
+/* 6 Authorization – flexible Admin policy */
+builder.Services.AddAuthorization(opts =>
+{
+    opts.AddPolicy("AdminUserOnly", policy =>
+        policy.RequireAssertion(ctx =>
+        {
+            // Accept any common claim key that equals "admin" (case‑insensitive)
+            string? username =
+                   ctx.User.FindFirst("Username")?.Value ??
+                   ctx.User.FindFirst("username")?.Value ??
+                   ctx.User.FindFirst("unique_name")?.Value ??
+                   ctx.User.FindFirst(ClaimTypes.Name)?.Value;
+
+            return username?.Equals("admin", StringComparison.OrdinalIgnoreCase) == true;
+        }));
+});
+
+/* 7 Controllers & Swagger */
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// 7) Dev helpers ---------------------------------------------------------------
+/* 8 Dev helpers */
 if (app.Environment.IsDevelopment())
 {
-    using var scope = app.Services.CreateScope();
-    scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
-
+    using var s = app.Services.CreateScope();
+    s.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// 8) Pipeline ------------------------------------------------------------------
+/* 9 Pipeline */
 app.UseHttpsRedirection();
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -88,16 +99,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Rewrite all non‑API paths to index.html for SPA routing
-app.UseRewriter(new RewriteOptions().Add(context =>
+app.UseRewriter(new RewriteOptions().Add(ctx =>
 {
-    var path = context.HttpContext.Request.Path.Value!;
-    if (!path.StartsWith("/api", StringComparison.OrdinalIgnoreCase) &&
-        !path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase) &&
-        !System.IO.Path.HasExtension(path))
-    {
-        context.HttpContext.Request.Path = "/index.html";
-    }
+    var p = ctx.HttpContext.Request.Path.Value!;
+    if (!p.StartsWith("/api") && !p.StartsWith("/swagger") && !System.IO.Path.HasExtension(p))
+        ctx.HttpContext.Request.Path = "/index.html";
 }));
 
 app.Run();

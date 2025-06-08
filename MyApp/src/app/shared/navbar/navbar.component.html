@@ -1,4 +1,4 @@
-<!-- File: app/shared/navbar/navbar.component.html -->
+<!-- File: src/app/shared/navbar/navbar.component.html -->
 <nav class="bg-gradient-to-r from-green-800 to-green-900 text-white fixed top-0 w-full z-50 shadow-lg">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16">
@@ -9,26 +9,27 @@
         <span class="text-xl font-extrabold tracking-tight">MovieGorilla</span>
       </a>
 
-      <!-- Nav links -->
+      <!-- Links -->
       <div class="hidden md:flex space-x-4">
         <a routerLink="/movies" class="px-3 py-2 rounded hover:bg-green-700">Browse</a>
         <a routerLink="/watchlist" class="px-3 py-2 rounded hover:bg-green-700">Watchlist</a>
         <a routerLink="/recommendations" class="px-3 py-2 rounded hover:bg-green-700">AI Picks</a>
         <a routerLink="/profile" class="px-3 py-2 rounded hover:bg-green-700">Profile</a>
-        <a routerLink="/admin/master-ratings" class="px-3 py-2 rounded hover:bg-green-700">Master Ratings</a>
-        <a routerLink="/admin/add-rating" class="px-3 py-2 rounded hover:bg-green-700">Add Rating</a>
 
-
+        <!-- Admin‑only -->
+        <ng-container *ngIf="auth.isAdmin()">
+          <a routerLink="/admin/master-ratings" class="px-3 py-2 rounded hover:bg-green-700">Master Ratings</a>
+          <a routerLink="/admin/add-rating" class="px-3 py-2 rounded hover:bg-green-700">Add Rating</a>
+        </ng-container>
       </div>
 
-      <!-- Auth / Dark mode -->
+      <!-- Auth -->
       <div class="flex items-center space-x-4">
-        <!-- Dark‑mode toggle omitted for brevity -->
-        <ng-container *ngIf="auth.isLoggedIn(); else loginLink">
+        <ng-container *ngIf="auth.isLoggedIn(); else login">
           <span class="text-sm">{{ auth.getUsername() }}</span>
           <button (click)="logout()" class="px-3 py-2 rounded hover:bg-green-700 bg-red-600">Logout</button>
         </ng-container>
-        <ng-template #loginLink>
+        <ng-template #login>
           <a routerLink="/login" class="px-3 py-2 rounded hover:bg-green-700 bg-blue-600">Login</a>
         </ng-template>
       </div>

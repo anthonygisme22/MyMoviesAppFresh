@@ -1,83 +1,92 @@
+<!--  Home Page  -->
 <div class="pt-16 bg-gradient-to-br from-gray-800 to-gray-900 text-white min-h-screen">
 
-  <!-- ---------------------------------------- -->
-  <!-- Redesigned Hero Banner (no hard crop)  -->
-  <!-- ---------------------------------------- -->
-  <div class="hero-image-container relative w-full">
-    <!--
-      The <img> now uses height:auto so it displays fully (no cropping).
-      We then place a semi-transparent black overlay on top to blend the edges
-      into the dark page background.
-    -->
+  <!-- ───── Hero banner ──────────────────────────────────────────────────── -->
+  <header class="relative w-full">
     <img src="assets/hero.jpg"
-         alt="Gorilla Hero"
-         class="hero-image" />
-
-    <!-- Black overlay with 40% opacity, centered text -->
-    <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-      <h1 class="text-4xl md:text-5xl font-extrabold text-white">
+         alt="MovieGorilla hero"
+         class="w-full h-auto block" />
+    <!-- overlay -->
+    <div class="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center px-4">
+      <h1 class="text-4xl md:text-5xl font-extrabold mb-4 drop-shadow">
         Welcome to MovieGorilla
       </h1>
-    </div>
-  </div>
 
-  <!-- ---------------------------------------- -->
-  <!-- Glarky’s Top Picks (unchanged)          -->
-  <!-- ---------------------------------------- -->
+      <!-- search bar -->
+      <form (submit)="doSearch($event)"
+            class="w-full max-w-xl flex items-center gap-2">
+        <input [(ngModel)]="searchTerm"
+               name="q"
+               type="text"
+               placeholder="Search any movie…"
+               aria-label="Search movies"
+               class="flex-1 px-4 py-2 rounded-md bg-gray-100 text-gray-900 focus:outline-none" />
+        <button type="submit"
+                class="px-4 py-2 rounded-md bg-green-600 hover:bg-green-700">
+          Search
+        </button>
+      </form>
+    </div>
+  </header>
+
+  <!-- ───── Glarky’s Top Picks ───────────────────────────────────────────── -->
   <section class="p-4 space-y-4">
     <h2 class="text-3xl font-bold">Glarky’s Top Picks</h2>
 
-    <!-- Loading placeholder -->
-    <div *ngIf="loadingFeatured" class="text-gray-400">Loading…</div>
-
-    <!-- No picks message -->
-    <div *ngIf="!loadingFeatured && featured.length === 0"
-         class="text-gray-400">
-      No top picks available.
+    <!-- skeleton -->
+    <div *ngIf="loadingFeatured" class="flex gap-3 overflow-x-auto pb-2">
+      <div *ngFor="let s of skeleton(6)"
+           class="min-w-[180px] h-56 bg-gray-700/50 animate-pulse rounded"></div>
     </div>
 
-    <!-- Horizontal scroll of featured cards -->
+    <!-- empty -->
+    <p *ngIf="!loadingFeatured && featured.length === 0"
+       class="text-gray-400">No top picks available.</p>
+
+    <!-- cards -->
     <div *ngIf="featured.length > 0"
-         class="flex space-x-4 overflow-x-auto pb-2">
-      <div *ngFor="let f of featured"
-           class="min-w-[180px] cursor-pointer transform hover:scale-105 transition"
-           (click)="viewMovie(f.movieId)">
+         class="flex gap-4 overflow-x-auto pb-2">
+      <article *ngFor="let f of featured"
+               (click)="viewMovie(f.movieId)"
+               class="min-w-[180px] cursor-pointer transition-transform hover:scale-105">
         <img [src]="imageBaseUrl + f.posterUrl"
-             alt="{{ f.title }}"
-             class="w-full h-44 object-cover rounded-lg shadow-lg" />
+             [alt]="f.title"
+             class="w-full aspect-[2/3] object-cover rounded-lg shadow-lg" />
         <div class="mt-2 text-center">
-          <h3 class="font-medium">{{ f.title }}</h3>
-          <p class="text-sm text-gray-300">Score: {{ f.score }}/100</p>
+          <h3 class="font-medium truncate">{{ f.title }}</h3>
+          <p class="text-sm text-gray-300">{{ f.score }}/100</p>
         </div>
-      </div>
+      </article>
     </div>
   </section>
 
-  <!-- ---------------------------------------- -->
-  <!-- Trending Now (TMDb)                     -->
-  <!-- ---------------------------------------- -->
+  <!-- ───── Trending Now ────────────────────────────────────────────────── -->
   <section class="p-4 space-y-4">
     <h2 class="text-3xl font-bold">Trending Now</h2>
 
-    <!-- Loading placeholder -->
-    <div *ngIf="loadingTrending" class="text-gray-400">Loading…</div>
+    <!-- skeleton -->
+    <div *ngIf="loadingTrending"
+         class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+      <div *ngFor="let s of skeleton(12)"
+           class="w-full aspect-[2/3] bg-gray-700/50 animate-pulse rounded"></div>
+    </div>
 
-    <!-- Grid of trending cards -->
+    <!-- grid -->
     <div *ngIf="!loadingTrending"
          class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
-      <div *ngFor="let t of trending"
-           class="cursor-pointer transform hover:scale-105 transition"
-           (click)="viewMovie(t.movieId)">
+      <article *ngFor="let t of trending"
+               (click)="viewMovie(t.movieId)"
+               class="cursor-pointer transition-transform hover:scale-105">
         <img [src]="imageBaseUrl + t.posterUrl"
-             alt="{{ t.title }}"
-             class="w-full h-32 object-cover rounded-lg shadow-lg" />
+             [alt]="t.title"
+             class="w-full aspect-[2/3] object-cover rounded-lg shadow-lg" />
         <div class="mt-1 text-center">
-          <h3 class="text-sm font-medium">{{ t.title }}</h3>
+          <h3 class="text-sm font-medium truncate">{{ t.title }}</h3>
           <p class="text-xs text-gray-300">
             {{ t.averageRating }}/100 • ({{ t.ratingCount }})
           </p>
         </div>
-      </div>
+      </article>
     </div>
   </section>
 
