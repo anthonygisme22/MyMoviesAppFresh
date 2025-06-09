@@ -1,117 +1,111 @@
-import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import {
+  Component, OnInit, HostListener
+} from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { MovieService, MovieDetail } from '../movie.service';
+import { FormsModule } from '@angular/forms';
+import {
+  MovieService,
+  MovieDetail,
+  TrailerDto,
+  SimilarMovie
+} from '../movie.service';
 
 @Component({
   standalone: true,
   selector: 'app-movie-detail',
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './movie-detail.component.html',
   styleUrls: ['./movie-detail.component.css']
 })
 export class MovieDetailComponent implements OnInit {
+
+  /* data ---------------------------------------------------------------- */
   movie?: MovieDetail;
+  trailers: TrailerDto[] = [];
+  similar: SimilarMovie[] = [];
+
+  /* ui state ------------------------------------------------------------ */
   loading = true;
   error = '';
+  primary = '#0f172a';   // fallback tailwind-slate‑900
   selectedScore?: number;
   inWatchlist = false;
-  watchlist: number[] = [];
+  watchIds: number[] = [];
+
+  /* helpers ------------------------------------------------------------- */
+  img = (p: string, size = 500) => `https://image.tmdb.org/t/p/w${size}${p}`;
+  yt = (k: string) => `https://www.youtube.com/embed/${k}`;
 
   constructor(
     private route: ActivatedRoute,
-    private movieService: MovieService
+    private router: Router,
+    private movies: MovieService
   ) { }
 
-  ngOnInit() {
-    const idParam = this.route.snapshot.paramMap.get('id');
-    if (!idParam) {
-      this.error = 'No movie ID provided.';
-      this.loading = false;
-      return;
-    }
-    const movieId = +idParam;
+  /* ───────────────────────────────────────────────────────────────────── */
+  ngOnInit(): void {
+    const id = +this.route.snapshot.paramMap.get('id')!;
+    this.fetch(id);
+  }
 
-    // Fetch movie details. If not found, catch 404 and show a friendly message.
-    this.movieService.getMovieById(movieId).subscribe({
-      next: (m) => {
-        this.movie = m;
-        this.selectedScore = m.userRating ?? undefined;
-        this.loadWatchlist();
+  private fetch(id: number) {
+    this.loading = true;
+    this.movies.getMovieById(id).subscribe({
+      next: d => {
+        this.movie = d;
+        this.selectedScore = d.userRating;
+        this.extractColor(d.posterUrl);
         this.loading = false;
+
+        this.movies.getTrailers(id).subscribe(t => this.trailers = t);
+        this.movies.getSimilar(id).subscribe(s => this.similar = s);
+
+        this.movies.getWatchlist().subscribe(w =>
+          this.watchIds = w.map(x => x.movie.movieId));
+        this.inWatchlist = this.watchIds.includes(id);
       },
-      error: (err) => {
-        // If API returned 404, show “Movie not found”; otherwise log & show generic error.
-        if (err.status === 404) {
-          this.error = `Movie #${movieId} not found.`;
-        } else {
-          console.error('Error fetching movie details:', err);
-          this.error = 'An unexpected error occurred.';
-        }
-        this.loading = false;
-      }
+      error: () => { this.error = 'Movie not found'; this.loading = false; }
     });
   }
 
-  private loadWatchlist() {
-    this.movieService.getWatchlist().subscribe({
-      next: (items) => {
-        this.watchlist = items.map(i => i.movie.movieId);
-        this.inWatchlist = this.movie
-          ? this.watchlist.includes(this.movie.movieId)
-          : false;
-      },
-      error: () => {
-        // ignore errors retrieving watchlist
-        this.inWatchlist = false;
-      }
-    });
+  /* dominant color via Vibrant – guarded */
+  private async extractColor(path: string) {
+    if (!path) return;
+    try {
+      const mod: any = await import('node-vibrant');
+      const Vibrant = mod.default ?? mod;
+      const sw = (await Vibrant.from(this.img(path)).getPalette()).Vibrant;
+      if (sw) this.primary = sw.getHex();
+    } catch { }
   }
 
-  toggleWatchlist() {
+  /* keyboard shortcuts -------------------------------------------------- */
+  @HostListener('window:keydown', ['$event'])
+  onKey(e: KeyboardEvent) {
+    if (e.key === 'Escape') this.router.navigate(['/movies']);
+  }
+
+  /* actions ------------------------------------------------------------- */
+  toggleWatch() {
     if (!this.movie) return;
-
-    if (this.inWatchlist) {
-      this.movieService.removeFromWatchlist(this.movie.movieId).subscribe({
-        next: () => this.inWatchlist = false,
-        error: () => { /* ignore failure */ }
-      });
-    } else {
-      this.movieService.addToWatchlist(this.movie.movieId).subscribe({
-        next: () => this.inWatchlist = true,
-        error: () => { /* ignore failure */ }
-      });
-    }
+    const op = this.inWatchlist
+      ? this.movies.removeFromWatchlist(this.movie.movieId)
+      : this.movies.addToWatchlist(this.movie.movieId);
+    op.subscribe(() => this.inWatchlist = !this.inWatchlist);
   }
 
   submitRating() {
     if (!this.movie || this.selectedScore == null) return;
-
-    this.movieService.rateMovie(this.movie.movieId, this.selectedScore).subscribe({
-      next: () => {
-        if (this.movie) {
-          this.movie.userRating = this.selectedScore!;
-        }
-      },
-      error: () => {
-        // ignore rating errors
-      }
-    });
+    this.movies.rateMovie(this.movie.movieId, this.selectedScore)
+      .subscribe(() => this.movie!.userRating = this.selectedScore);
   }
 
   removeRating() {
     if (!this.movie) return;
-
-    this.movieService.removeRating(this.movie.movieId).subscribe({
-      next: () => {
-        if (this.movie) {
-          this.movie.userRating = undefined;
-          this.selectedScore = undefined;
-        }
-      },
-      error: () => {
-        // ignore
-      }
+    this.movies.removeRating(this.movie.movieId).subscribe(() => {
+      this.movie!.userRating = undefined;
+      this.selectedScore = undefined;
     });
   }
 }

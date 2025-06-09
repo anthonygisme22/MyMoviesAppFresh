@@ -1,98 +1,82 @@
-<div class="pt-20 p-4 space-y-4">
+<div class="pt-20 p-4 min-h-screen text-white">
 
-  <!-- ===================================== -->
-  <!--   FILTER & SEARCH ROW (restyled)      -->
-  <!-- ===================================== -->
-  <form (ngSubmit)="applyFilters()" class="flex flex-wrap gap-4 items-end mb-4">
-    <!-- Title Contains -->
+  <!-- ========== Search / Filters ====================================== -->
+  <form (ngSubmit)="apply()" class="flex flex-wrap gap-4 items-end mb-6">
+    <!-- Title -->
     <div class="flex flex-col">
-      <label class="text-sm text-gray-200" for="titleQuery">Title Contains:</label>
-      <input id="titleQuery"
-             name="titleQuery"
-             [(ngModel)]="titleQuery"
-             type="text"
-             placeholder="Search by title"
-             class="mt-1 px-3 py-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500" />
+      <label class="text-sm mb-1">Title</label>
+      <input [(ngModel)]="query" name="query"
+             placeholder="Search..."
+             class="bg-gray-700 rounded px-3 py-2 outline-none w-60" />
     </div>
 
-    <!-- Min Rating -->
+    <!-- Min rating -->
     <div class="flex flex-col">
-      <label class="text-sm text-gray-200" for="minRating">Min Rating:</label>
-      <input id="minRating"
-             name="minRating"
-             [(ngModel)]="minRating"
-             type="number"
-             min="0"
-             max="100"
-             placeholder="0"
-             class="mt-1 w-20 px-3 py-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500" />
+      <label class="text-sm mb-1">Min Score</label>
+      <input [(ngModel)]="minRating" name="min"
+             type="number" min="0" max="100"
+             class="bg-gray-700 rounded px-3 py-2 outline-none w-24" />
     </div>
 
-    <!-- Max Rating -->
+    <!-- Max rating -->
     <div class="flex flex-col">
-      <label class="text-sm text-gray-200" for="maxRating">Max Rating:</label>
-      <input id="maxRating"
-             name="maxRating"
-             [(ngModel)]="maxRating"
-             type="number"
-             min="0"
-             max="100"
-             placeholder="100"
-             class="mt-1 w-20 px-3 py-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500" />
+      <label class="text-sm mb-1">Max Score</label>
+      <input [(ngModel)]="maxRating" name="max"
+             type="number" min="0" max="100"
+             class="bg-gray-700 rounded px-3 py-2 outline-none w-24" />
     </div>
 
-    <!-- Apply Button -->
-    <div class="flex flex-col">
-      <button type="submit"
-              class="mt-6 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
-        Apply
-      </button>
-    </div>
+    <button type="submit"
+            class="h-10 px-6 bg-blue-600 hover:bg-blue-700 rounded">
+      Apply
+    </button>
   </form>
 
-  <!-- =================================== -->
-  <!--   MOVIE GRID (with Glarky’s Score)  -->
-  <!-- =================================== -->
-  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-    <ng-container *ngFor="let m of movies">
-      <a [routerLink]="['/movies', m.movieId]"
-         class="block bg-gray-800 text-white rounded overflow-hidden hover:bg-gray-700 transition shadow-lg">
-        <img [src]="imageBaseUrl + m.posterUrl"
-             alt="{{ m.title }}"
-             class="w-full h-40 object-cover" />
-        <div class="p-2">
-          <h3 class="font-semibold">{{ m.title }}</h3>
-          <p class="text-sm text-gray-400 mt-1">
-            <span *ngIf="adminRatingsMap[m.movieId] !== undefined">
-              {{ adminRatingsMap[m.movieId] }}/100
-            </span>
-            <span *ngIf="adminRatingsMap[m.movieId] === undefined">—/100</span>
-          </p>
-        </div>
-      </a>
-    </ng-container>
+  <!-- ========== Skeleton while loading ================================ -->
+  <div *ngIf="loading" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+    <div *ngFor="let _ of skeleton(pageSize)"
+         class="animate-pulse bg-gray-700/60 aspect-[2/3] rounded"></div>
   </div>
 
-  <!-- ========================================= -->
-  <!--   PAGINATION CONTROLS (if not searching)  -->
-  <!-- ========================================= -->
-  <!-- Only show pagination if not in “search” mode -->
-  <ng-container *ngIf="!titleQuery || titleQuery.trim() === ''">
-    <div class="flex justify-center items-center space-x-4 mt-6">
-      <button (click)="prevPage()"
-              [disabled]="page <= 1"
-              class="px-3 py-1 bg-gray-600 rounded disabled:opacity-50 text-white hover:bg-gray-500 transition">
-        Previous
-      </button>
-      <span class="text-gray-200">Page {{ page }} of {{ totalPages }}</span>
-      <button (click)="nextPage()"
-              [disabled]="page >= totalPages"
-              class="px-3 py-1 bg-gray-600 rounded disabled:opacity-50 text-white hover:bg-gray-500 transition">
-        Next
-      </button>
-    </div>
-  </ng-container>
+  <!-- ========== Empty / error states ================================== -->
+  <p *ngIf="!loading && error" class="text-red-400">{{ error }}</p>
+  <p *ngIf="!loading && !error && movies.length===0"
+     class="text-gray-400">No movies found.</p>
 
-  <!-- Error Message -->
-  <p *ngIf="error" class="text-red-500 text-center mt-4">{{ error }}</p>
+  <!-- ========== Grid =================================================== -->
+  <div *ngIf="!loading && movies.length"
+       class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+    <a *ngFor="let m of movies"
+       [routerLink]="['/movies', m.movieId]"
+       class="relative group transform hover:scale-105 transition">
+      <img [src]="img(m.posterUrl)"
+           class="w-full aspect-[2/3] object-cover rounded" />
+      <!-- Glarky’s score -->
+      <div class="absolute top-2 left-2 bg-green-700 px-2 py-0.5 rounded text-xs"
+           *ngIf="adminMap[m.movieId] !== undefined">
+        {{ adminMap[m.movieId] }}/100
+      </div>
+      <!-- title overlay on hover -->
+      <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100
+                  flex items-end p-2 rounded transition">
+        <p class="text-sm font-semibold leading-tight line-clamp-2">{{ m.title }}</p>
+      </div>
+    </a>
+  </div>
+
+  <!-- ========== Pagination ============================================ -->
+  <div *ngIf="!loading && totalPages>1"
+       class="flex justify-center items-center gap-6 mt-8">
+    <button (click)="prev()"
+            [disabled]="page<=1"
+            class="px-4 py-1 bg-gray-600 rounded disabled:opacity-40">
+      Prev
+    </button>
+    <span>Page {{ page }} / {{ totalPages }}</span>
+    <button (click)="next()"
+            [disabled]="page>=totalPages"
+            class="px-4 py-1 bg-gray-600 rounded disabled:opacity-40">
+      Next
+    </button>
+  </div>
 </div>

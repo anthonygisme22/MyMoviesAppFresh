@@ -2,9 +2,13 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { MovieService, Movie, PagedResponse } from '../movie.service';
-import { HomeService, AdminRating } from '../../home/home.service';
-import { environment } from '../../../environments/environment';
+
+import {
+  MovieService,
+  Movie,
+  PagedResponse,
+  AdminRatingDto
+} from '../movie.service';
 
 @Component({
   standalone: true,
@@ -14,105 +18,76 @@ import { environment } from '../../../environments/environment';
   styleUrls: ['./movie-list.component.css']
 })
 export class MovieListComponent implements OnInit {
-  movies: Movie[] = [];
-  error = '';
-  imageBaseUrl = environment.tmdbImageBaseUrl;
 
-  // Pagination state
+  /* data ----------------------------------------------------------------- */
+  movies: Movie[] = [];
+  adminMap: Record<number, number> = {};   // movieId → Glarky’s score
+
+  /* querying state ------------------------------------------------------- */
   page = 1;
-  pageSize = 25;
-  totalItems = 0;
+  pageSize = 24;
+  total = 0;
   totalPages = 0;
 
-  // Filter fields
-  titleQuery = '';
+  query = '';
   minRating?: number;
   maxRating?: number;
 
-  // Map of MovieId → Glarky’s (admin) score
-  adminRatingsMap: { [movieId: number]: number } = {};
+  /* ui state ------------------------------------------------------------- */
+  loading = true;
+  error = '';
 
-  constructor(
-    private movieService: MovieService,
-    private homeService: HomeService
-  ) { }
+  /* constants ------------------------------------------------------------ */
+  img = (p: string) => `https://image.tmdb.org/t/p/w342${p}`;
 
+  constructor(private moviesSvc: MovieService) { }
+
+  /* lifecycle ------------------------------------------------------------ */
   ngOnInit(): void {
-    // Load the first page and Glarky’s ratings on startup
-    this.loadPage();
-    this.loadAdminRatings();
-  }
-
-  // Decide between paged listing vs. title‐search
-  loadPage(): void {
-    this.error = '';
-
-    // If there's a non‐empty titleQuery, perform a search
-    if (this.titleQuery && this.titleQuery.trim() !== '') {
-      this.movieService.search(this.titleQuery.trim()).subscribe({
-        next: (results: Movie[]) => {
-          // Display search results—no pagination applied
-          this.movies = results;
-          this.totalItems = results.length;
-          this.page = 1;
-          this.pageSize = results.length;
-          this.totalPages = 1;
-        },
-        error: () => {
-          this.error = 'Failed to search for movies.';
-        }
-      });
-    } else {
-      // Otherwise, fetch a paged, filtered list
-      this.movieService
-        .getMovies(this.page, this.pageSize, this.minRating, this.maxRating)
-        .subscribe({
-          next: (data: PagedResponse<Movie>) => {
-            this.movies = data.items;
-            this.totalItems = data.total;
-            this.page = data.page;
-            this.pageSize = data.pageSize;
-            this.totalPages = Math.ceil(data.total / data.pageSize);
-          },
-          error: () => {
-            this.error = 'Failed to load movies.';
-          }
-        });
-    }
-  }
-
-  // Called by the “Apply” button (filter or search)
-  applyFilters(): void {
-    this.page = 1;
-    this.loadPage();
-  }
-
-  prevPage(): void {
-    if (this.page > 1) {
-      this.page--;
-      this.loadPage();
-    }
-  }
-
-  nextPage(): void {
-    if (this.page < this.totalPages) {
-      this.page++;
-      this.loadPage();
-    }
-  }
-
-  // Fetch Glarky’s (admin) ratings once, storing in a map
-  loadAdminRatings(): void {
-    this.homeService.getAdminRatings().subscribe({
-      next: (data: AdminRating[]) => {
-        this.adminRatingsMap = {};
-        data.forEach(r => {
-          this.adminRatingsMap[r.movieId] = r.score;
-        });
-      },
-      error: () => {
-        // If admin‐ratings fail, leave map empty
-      }
+    this.fetchPage();
+    this.moviesSvc.getAdminRatings().subscribe(r => {
+      this.adminMap = Object.fromEntries(r.map(x => [x.movieId, x.score]));
     });
   }
+
+  /* data fetch ----------------------------------------------------------- */
+  private fetchPage(): void {
+    this.loading = true;
+    this.error = '';
+
+    if (this.query.trim()) {
+      this.moviesSvc.search(this.query.trim()).subscribe({
+        next: list => {
+          this.movies = list;
+          this.total = list.length;
+          this.totalPages = 1;
+          this.page = 1;
+          this.loading = false;
+        },
+        error: () => { this.error = 'Search failed'; this.loading = false; }
+      });
+    } else {
+      this.moviesSvc
+        .getMovies(this.page, this.pageSize, this.minRating, this.maxRating)
+        .subscribe({
+          next: (resp: PagedResponse<Movie>) => {
+            this.movies = resp.items;
+            this.total = resp.total;
+            this.page = resp.page;
+            this.pageSize = resp.pageSize;
+            this.totalPages = Math.max(1, Math.ceil(resp.total / resp.pageSize));
+            this.loading = false;
+          },
+          error: () => { this.error = 'Failed to load movies'; this.loading = false; }
+        });
+    }
+  }
+
+  /* handlers ------------------------------------------------------------- */
+  apply(): void { this.page = 1; this.fetchPage(); }
+  prev(): void { if (this.page > 1) { this.page--; this.fetchPage(); } }
+  next(): void { if (this.page < this.totalPages) { this.page++; this.fetchPage(); } }
+
+  /* helpers -------------------------------------------------------------- */
+  skeleton(n: number) { return Array.from({ length: n }); }
 }

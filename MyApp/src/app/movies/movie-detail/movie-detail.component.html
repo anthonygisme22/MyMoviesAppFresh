@@ -1,70 +1,104 @@
-<!-- Show spinner while loading -->
-<div *ngIf="loading" class="text-gray-400 text-center mt-8">Loading…</div>
-
-<!-- If not loading and there’s an error message, show it -->
-<div *ngIf="!loading && error" class="text-red-600 text-center my-4">
-  {{ error }}
+<!-- Skeleton while loading -->
+<div *ngIf="loading" class="p-4 pt-20 space-y-4">
+  <div class="h-72 animate-pulse bg-gray-700 rounded"></div>
+  <div class="h-48 animate-pulse bg-gray-700 rounded"></div>
+  <div class="h-48 animate-pulse bg-gray-700 rounded"></div>
 </div>
 
-<!-- Show movie details only if not loading, no error, and movie is defined -->
-<div *ngIf="!loading && !error && movie" class="max-w-4xl mx-auto p-4">
-  <div class="flex flex-col md:flex-row bg-gray-900 rounded-lg overflow-hidden shadow-lg text-white">
-    <!-- Poster Column -->
-    <div class="md:w-1/3">
-      <img [src]="'https://image.tmdb.org/t/p/w500' + movie.posterUrl"
-           alt="{{ movie.title }} poster"
-           class="w-full h-auto object-cover" />
-    </div>
+<!-- Error -->
+<p *ngIf="!loading && error" class="text-red-400 pt-24 text-center">{{ error }}</p>
 
-    <!-- Details Column -->
-    <div class="md:w-2/3 p-4 flex flex-col">
-      <h1 class="text-3xl font-bold mb-2">{{ movie.title }}</h1>
-      <p *ngIf="movie.masterRating !== null && movie.masterRating !== undefined"
-         class="text-sm text-gray-400 mb-4">
-        Glarky’s Score: {{ movie.masterRating }}/100
-      </p>
+<!-- Main content -->
+<div *ngIf="!loading && movie"
+     [style.background]="primary"
+     class="min-h-screen text-white pt-16">
 
-      <h2 class="text-xl font-semibold mb-1">Overview</h2>
-      <p class="text-gray-300 mb-4">{{ movie.overview }}</p>
+  <!-- ── Hero header ─────────────────────────────────────────────── -->
+  <div class="relative md:flex md:items-stretch">
+    <img [src]="img(movie.posterUrl,500)"
+         class="w-full md:w-64 object-cover md:h-[28rem] shadow-lg" />
 
-      <h2 class="text-xl font-semibold mb-1">Cast</h2>
-      <ul class="list-disc list-inside mb-4">
-        <li *ngFor="let c of movie.cast" class="text-gray-300">
-          <span class="font-medium">{{ c.name }}</span> as {{ c.character }}
-        </li>
-      </ul>
+    <div class="p-6 flex-1 flex flex-col justify-between">
+      <div>
+        <h1 class="text-3xl font-extrabold mb-2">{{ movie.title }}</h1>
+        <p class="text-sm mb-4 text-white/80">{{ movie.overview }}</p>
 
-      <!-- Watchlist Toggle -->
-      <button (click)="toggleWatchlist()"
-              class="mb-4 px-4 py-2 rounded
-               {{ inWatchlist ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700' }}
-               text-white">
-        {{ inWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist' }}
-      </button>
-
-      <!-- Rating Controls -->
-      <div class="mt-auto space-y-2">
-        <div>
-          <label class="block mb-1">Your Rating (1–100):</label>
-          <input type="number"
-                 [(ngModel)]="selectedScore"
-                 min="1"
-                 max="100"
-                 class="w-20 border p-1 rounded text-black" />
+        <div class="flex gap-4 text-sm mb-4">
+          <span *ngIf="movie.runtime">{{ movie.runtime }} min</span>
+          <span *ngIf="movie.genres?.length">{{ movie.genres.join(', ') }}</span>
         </div>
-        <div class="flex space-x-2">
+
+        <p *ngIf="movie.masterRating!=null"
+           class="text-lg font-semibold mb-4">
+          Glarky’s Score: {{ movie.masterRating }}/100
+        </p>
+      </div>
+
+      <!-- Watchlist / rating -->
+      <div class="flex flex-wrap gap-4 items-center" id="ratingSection">
+        <button (click)="toggleWatch()"
+                class="px-4 py-2 rounded
+                       bg-blue-600 hover:bg-blue-700">
+          {{ inWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist' }}
+        </button>
+
+        <div class="flex items-center gap-2">
+          <input type="number" [(ngModel)]="selectedScore"
+                 class="w-20 text-black rounded p-1"
+                 min="1" max="100" />
           <button (click)="submitRating()"
-                  [disabled]="selectedScore == null"
-                  class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
-            Submit
+                  class="bg-green-600 hover:bg-green-700 rounded px-3 py-1">
+            Save
           </button>
-          <button *ngIf="movie.userRating !== null && movie.userRating !== undefined"
+          <button *ngIf="movie.userRating!=null"
                   (click)="removeRating()"
-                  class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
-            Remove Rating
+                  class="bg-red-600 hover:bg-red-700 rounded px-3 py-1">
+            Clear
           </button>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- ── Trailer carousel ────────────────────────────────────────── -->
+  <section *ngIf="trailers.length" class="p-6 space-y-4">
+    <h2 class="text-2xl font-bold">Trailer</h2>
+    <div class="flex overflow-x-auto gap-4 pb-2">
+      <iframe *ngFor="let t of trailers"
+              [src]="yt(t.youtubeKey)"
+              width="320" height="180"
+              loading="lazy"
+              class="rounded shadow-lg flex-shrink-0"></iframe>
+    </div>
+  </section>
+
+  <!-- ── Cast strip ──────────────────────────────────────────────── -->
+  <section *ngIf="movie.cast.length" class="p-6 space-y-4">
+    <h2 class="text-2xl font-bold">Top‑billed Cast</h2>
+    <div class="flex overflow-x-auto gap-4 pb-2">
+      <div *ngFor="let c of movie.cast"
+           class="w-40 flex-shrink-0">
+        <div class="aspect-square bg-gray-600 rounded"></div>
+        <p class="mt-1 font-medium text-sm">{{ c.name }}</p>
+        <p class="text-xs text-white/70">{{ c.character }}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Similar movies grid ─────────────────────────────────────── -->
+  <section *ngIf="similar.length" class="p-6 space-y-4">
+    <h2 class="text-2xl font-bold">Similar Movies</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+      <a *ngFor="let s of similar"
+         [routerLink]="['/movies', s.movieId]"
+         class="relative group transform hover:scale-105 transition">
+        <img [src]="img(s.posterUrl,342)"
+             class="w-full aspect-[2/3] object-cover rounded" />
+        <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100
+                    flex items-end p-1 rounded transition">
+          <p class="text-xs font-semibold line-clamp-2">{{ s.title }}</p>
+        </div>
+      </a>
+    </div>
+  </section>
 </div>

@@ -1,4 +1,3 @@
-// File: src/app/admin/admin-master-ratings.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MovieService, AdminRatingDto } from '../movies/movie.service';
@@ -8,53 +7,55 @@ import { MovieService, AdminRatingDto } from '../movies/movie.service';
   selector: 'app-admin-master-ratings',
   imports: [CommonModule],
   template: `
-  <section class="p-6">
-    <h2 class="text-2xl font-bold mb-4">Master Ratings</h2>
+    <div class="pt-20 p-4 text-white">
+      <h2 class="text-2xl font-bold mb-4">All Master Ratings</h2>
 
-    <div class="overflow-x-auto">
-      <table class="table table-zebra w-full min-w-[750px]">
+      <table class="min-w-full">
         <thead>
-          <tr>
-            <th (click)="sort('movieId')">Movie ID</th>
-            <th (click)="sort('movieTitle')">Name</th>
-            <th (click)="sort('tmdbId')">TMDB ID</th>
-            <th (click)="sort('score')">Rating <span *ngIf="sortKey==='score'">{{ dir==='asc'?'▲':'▼' }}</span></th>
+          <tr class="bg-gray-700">
+            <th class="px-3 py-1">Poster</th>
+            <!-- ▲▼ glyph hints sorting -->
+            <th class="px-3 py-1 cursor-pointer" (click)="sort('title')">
+              Name ▲▼
+            </th>
+            <th class="px-3 py-1 cursor-pointer" (click)="sort('score')">
+              Score ▲▼
+            </th>
           </tr>
         </thead>
+
         <tbody>
-          <tr *ngFor="let r of rows">
-            <td>{{ r.movieId }}</td>
-            <td>{{ r.movieTitle }}</td>
-            <td>{{ r.tmdbId }}</td>
-            <td>{{ r.score }}</td>
+          <tr *ngFor="let r of masterRatings" class="border-b border-gray-700">
+            <td class="px-3 py-1">
+              <img [src]="thumb(r.posterUrl)" class="w-10">
+            </td>
+            <td class="px-3 py-1">{{ r.title }}</td>
+            <td class="px-3 py-1">{{ r.score }}</td>
           </tr>
         </tbody>
       </table>
     </div>
-  </section>
   `,
-  styles: ['th{cursor:pointer;white-space:nowrap;}']
+  styles: []
 })
 export class AdminMasterRatingsComponent implements OnInit {
-  rows: AdminRatingDto[] = [];
-  sortKey: keyof AdminRatingDto = 'score';
-  dir: 'asc' | 'desc' = 'desc';
+  masterRatings: AdminRatingDto[] = [];
+  sortKey: keyof AdminRatingDto = 'title';
 
   constructor(private movies: MovieService) { }
 
-  ngOnInit() {
-    this.movies.getAdminRatings().subscribe(d => this.rows = [...d]);
+  ngOnInit(): void {
+    this.movies.getAdminRatings().subscribe(r => {
+      this.masterRatings = r;
+      this.sort('score');   // default sort
+    });
   }
 
-  sort(key: keyof AdminRatingDto) {
-    if (this.sortKey === key) {
-      this.dir = this.dir === 'asc' ? 'desc' : 'asc';
-    } else {
-      this.sortKey = key;
-      this.dir = 'asc';
-    }
-    const m = this.dir === 'asc' ? 1 : -1;
-    this.rows.sort((a: any, b: any) =>
-      (a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0) * m);
+  sort(k: keyof AdminRatingDto) {
+    this.sortKey = k;
+    this.masterRatings.sort((a, b) =>
+      a[k]! < b[k]! ? -1 : a[k]! > b[k]! ? 1 : 0);
   }
+
+  thumb(p: string) { return `https://image.tmdb.org/t/p/w92${p}`; }
 }
