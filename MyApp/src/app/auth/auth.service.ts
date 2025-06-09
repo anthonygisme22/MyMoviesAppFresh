@@ -1,89 +1,53 @@
-// File: src/app/auth/auth.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { tap, map } from 'rxjs/operators';
-import { Observable } from 'rxjs';
+import { tap, catchError, throwError, Observable } from 'rxjs';
+import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
-
-interface JwtResponse { token: string }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly tokenKey = 'token';
-  private readonly api = `${environment.apiUrl}/api/auth`;
 
-  constructor(private http: HttpClient) { }
+  private base = `${environment.apiUrl}/api/auth`;
 
-  /* ─── Auth endpoints ───────────────────────────────────────────────────── */
-  login(username: string, password: string): Observable<void> {
-    return this.http
-      .post<JwtResponse>(`${this.api}/login`, { username, password })
-      .pipe(tap(r => localStorage.setItem(this.tokenKey, r.token)),
-        map(() => void 0));
-  }
+  constructor(private http: HttpClient, private router: Router) { }
 
+  /* ---------- state helpers ---------------------------- */
+  isLoggedIn() { return !!localStorage.getItem('token'); }
+  getUsername() { return localStorage.getItem('username') ?? ''; }
+  isAdmin() { return localStorage.getItem('role') === 'Admin'; }
+
+  /* ---------- API calls -------------------------------- */
   register(username: string, password: string): Observable<void> {
-    return this.http
-      .post<JwtResponse>(`${this.api}/register`, { username, password })
-      .pipe(tap(r => localStorage.setItem(this.tokenKey, r.token)),
-        map(() => void 0));
+    return this.http.post<void>(`${this.base}/register`, { username, password })
+      .pipe(catchError(err => throwError(() => err.error || 'Registration failed')));
   }
 
-  logout(): void {
-    localStorage.removeItem(this.tokenKey);
+  login(username: string, password: string) {
+    return this.http.post<{ token: string }>(`${this.base}/login`, { username, password })
+      .pipe(
+        tap(res => {
+          localStorage.setItem('token', res.token);
+          localStorage.setItem('username', username);
+          const role = JSON.parse(atob(res.token.split('.')[1]))['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+          if (role) localStorage.setItem('role', role);
+        })
+      );
   }
 
-  /* ─── Token helpers ────────────────────────────────────────────────────── */
+  logout() {
+    localStorage.clear();
+    this.router.navigate(['/login']);
+  }
+  /* add these two one‑liners inside the AuthService class */
+
+  /** legacy helper for code that still calls auth.getToken() */
   getToken(): string | null {
-    return localStorage.getItem(this.tokenKey);
+    return localStorage.getItem('token');
   }
 
-  private get payload(): Record<string, any> | null {
-    const t = this.getToken();
-    if (!t) return null;
-    try { return JSON.parse(atob(t.split('.')[1])); }
-    catch { return null; }
+  /** legacy helper for code that still calls auth.getRole() */
+  getRole(): string {
+    return localStorage.getItem('role') ?? '';
   }
 
-  getUsername(): string | null {
-    const p = this.payload;
-    if (!p) return null;
-    return (
-      p.Username ??
-      p.username ??
-      p.unique_name ??      // Microsoft JWT default
-      p.name ??
-      null
-    );
-  }
-
-  /** Return 'Admin' or 'User' depending on claims */
-  getRole(): string | null {
-    const p = this.payload;
-    if (!p) return null;
-
-    // Common patterns
-    if (typeof p.role === 'string' && p.role.toLowerCase() === 'admin') return 'Admin';
-    if (Array.isArray(p.roles) &&
-      p.roles.some((r: string) => r.toLowerCase() === 'admin')) return 'Admin';
-
-    // Claims with namespace
-    const nsKey = Object.keys(p).find(k => k.endsWith('/role') || k.endsWith('/roles'));
-    if (nsKey && typeof p[nsKey] === 'string' &&
-      p[nsKey].toLowerCase() === 'admin') return 'Admin';
-
-    // Fallback: username equals 'admin'
-    if (this.getUsername()?.toLowerCase() === 'admin') return 'Admin';
-
-    return 'User';
-  }
-
-  /** True if current user is admin */
-  isAdmin(): boolean {
-    return this.getRole() === 'Admin';
-  }
-
-  isLoggedIn(): boolean {
-    return !!this.getToken();
-  }
 }

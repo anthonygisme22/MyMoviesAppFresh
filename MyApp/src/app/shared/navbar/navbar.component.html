@@ -1,39 +1,56 @@
-<!-- File: src/app/shared/navbar/navbar.component.html -->
 <nav class="bg-gradient-to-r from-green-800 to-green-900 text-white fixed top-0 w-full z-50 shadow-lg">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16">
 
-      <!-- Logo -->
+      <!-- ── Logo / Home ─────────────────────────────────────────────── -->
       <a routerLink="/" class="flex items-center space-x-2">
-        <img src="assets/gorilla-logo.png" alt="MovieGorilla" class="h-8 w-8 object-cover" />
+        <img src="assets/gorilla-logo.png" alt="MovieGorilla"
+             class="h-8 w-8 object-cover" />
         <span class="text-xl font-extrabold tracking-tight">MovieGorilla</span>
       </a>
 
-      <!-- Links -->
+      <!-- ── Main links (always visible) ─────────────────────────────── -->
       <div class="hidden md:flex space-x-4">
         <a routerLink="/movies" class="px-3 py-2 rounded hover:bg-green-700">Browse</a>
         <a routerLink="/watchlist" class="px-3 py-2 rounded hover:bg-green-700">Watchlist</a>
-        <a routerLink="/recommendations" class="px-3 py-2 rounded hover:bg-green-700">AI Picks</a>
+        <a routerLink="/recommendations" class="px-3 py-2 rounded hover:bg-green-700">AI Picks</a>
         <a routerLink="/profile" class="px-3 py-2 rounded hover:bg-green-700">Profile</a>
 
-        <!-- Admin‑only -->
+        <!-- Admin‑only links -->
         <ng-container *ngIf="auth.isAdmin()">
-          <a routerLink="/admin/master-ratings" class="px-3 py-2 rounded hover:bg-green-700">Master Ratings</a>
-          <a routerLink="/admin/add-rating" class="px-3 py-2 rounded hover:bg-green-700">Add Rating</a>
+          <a routerLink="/admin/master-ratings" class="px-3 py-2 rounded hover:bg-green-700">
+            Master Ratings
+          </a>
+          <a routerLink="/admin/add-rating" class="px-3 py-2 rounded hover:bg-green-700">
+            Add Rating
+          </a>
         </ng-container>
       </div>
 
-      <!-- Auth -->
+      <!-- ── Auth controls / Dark mode ───────────────────────────────── -->
       <div class="flex items-center space-x-4">
-        <ng-container *ngIf="auth.isLoggedIn(); else login">
+        <!-- Dark‑mode toggle omitted for brevity -->
+        <!-- When logged‑in -->
+        <ng-container *ngIf="auth.isLoggedIn(); else authLinks">
           <span class="text-sm">{{ auth.getUsername() }}</span>
-          <button (click)="logout()" class="px-3 py-2 rounded hover:bg-green-700 bg-red-600">Logout</button>
+          <button (click)="logout()"
+                  class="px-3 py-2 rounded hover:bg-green-700 bg-red-600">
+            Logout
+          </button>
         </ng-container>
-        <ng-template #login>
-          <a routerLink="/login" class="px-3 py-2 rounded hover:bg-green-700 bg-blue-600">Login</a>
+
+        <!-- When NOT logged‑in -->
+        <ng-template #authLinks>
+          <a routerLink="/login"
+             class="px-3 py-2 rounded hover:bg-green-700 bg-blue-600">
+            Login
+          </a>
+          <a routerLink="/register"
+             class="px-3 py-2 rounded hover:bg-green-700 bg-purple-600">
+            Register
+          </a>
         </ng-template>
       </div>
-
     </div>
   </div>
 </nav>
