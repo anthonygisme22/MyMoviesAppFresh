@@ -1,42 +1,38 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { MovieService, WatchlistItem } from '../movie.service';
 
 @Component({
   standalone: true,
   selector: 'app-watchlist',
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './watchlist.component.html',
   styleUrls: ['./watchlist.component.css']
 })
 export class WatchlistComponent implements OnInit {
-  watchlist: WatchlistItem[] = [];
-  error = '';
+
+  items: WatchlistItem[] = [];
   loading = true;
+  error = '';
 
-  constructor(private movieService: MovieService) { }
+  img = (p: string) => `https://image.tmdb.org/t/p/w342${p}`;
 
-  ngOnInit(): void {
-    this.movieService.getWatchlist().subscribe({
-      next: (data) => {
-        this.watchlist = data;
-        this.loading = false;
-      },
-      error: () => {
-        this.error = 'Failed to load watchlist.';
-        this.loading = false;
-      }
+  constructor(private movies: MovieService) { }
+
+  ngOnInit(): void { this.reload(); }
+
+  reload() {
+    this.loading = true; this.error = '';
+    this.movies.getWatchlist().subscribe({
+      next: list => { this.items = list; this.loading = false; },
+      error: () => { this.error = 'Failed to load watchlist'; this.loading = false; }
     });
   }
 
-  remove(item: WatchlistItem) {
-    this.movieService.removeFromWatchlist(item.movie.movieId).subscribe({
-      next: () => {
-        this.watchlist = this.watchlist.filter(i => i.movie.movieId !== item.movie.movieId);
-      },
-      error: () => {
-        this.error = 'Failed to remove from watchlist.';
-      }
-    });
+  remove(id: number) {
+    this.movies.removeFromWatchlist(id).subscribe(() => this.reload());
   }
+
+  sk(n = 12) { return Array.from({ length: n }); }
 }

@@ -1,66 +1,49 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MovieService, RatingDto } from '../movies/movie.service';
+import { RouterModule } from '@angular/router';
+import {
+  MovieService, RatingDto, MovieDetail
+} from '../movies/movie.service';
 import { AuthService } from '../auth/auth.service';
+import { forkJoin } from 'rxjs';
 
 @Component({
   standalone: true,
   selector: 'app-profile',
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.css']
 })
 export class ProfileComponent implements OnInit {
-  username = '';
-  userId       !: number;
-  ratings: RatingDto[] = [];
-  error = '';
-  loading = true;
 
-  constructor(
-    private auth: AuthService,
-    private movieSvc: MovieService
-  ) { }
+  rows: { rating: RatingDto; movie: MovieDetail }[] = [];
+  loading = true;
+  error = '';
+
+  constructor(private movies: MovieService,
+    private auth: AuthService) { }
 
   ngOnInit(): void {
-    const token = this.auth.getToken();
-    if (!token) {
-      this.error = 'Not logged in.';
-      this.loading = false;
-      return;
-    }
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      this.username = payload.unique_name || payload.name || '';
-      this.userId = Number(payload.sub);
-    } catch {
-      this.error = 'Invalid token.';
-      this.loading = false;
-      return;
-    }
 
-    this.movieSvc.getUserRatings(this.userId).subscribe({
-      next: (data) => {
-        this.ratings = data;
-        this.loading = false;
-      },
-      error: (err) => {
-        console.error('Error fetching user ratings:', err);
-        this.error = 'Failed to load your ratings.';
-        this.loading = false;
-      }
-    });
-  }
+    const uid = Number(JSON.parse(
+      atob(this.auth.getToken()!.split('.')[1])).sub);
 
-  removeRating(rating: RatingDto) {
-    this.movieSvc.removeRating(rating.movieId).subscribe({
-      next: () => {
-        this.ratings = this.ratings.filter(r => r.movieId !== rating.movieId);
+    this.movies.getUserRatings(uid).subscribe({
+      next: ratings => {
+        if (ratings.length === 0) { this.loading = false; return; }
+
+        /* fetch each movie by id in parallel */
+        const calls = ratings.map(r =>
+          this.movies.getMovieById(r.movieId));
+        forkJoin(calls).subscribe({
+          next: details => {
+            this.rows = ratings.map((r, i) => ({ rating: r, movie: details[i] }));
+            this.loading = false;
+          },
+          error: () => { this.error = 'Failed to load movies'; this.loading = false; }
+        });
       },
-      error: (err) => {
-        console.error('Error removing rating:', err);
-        this.error = 'Failed to remove rating.';
-      }
+      error: () => { this.error = 'Failed to load ratings'; this.loading = false; }
     });
   }
 }

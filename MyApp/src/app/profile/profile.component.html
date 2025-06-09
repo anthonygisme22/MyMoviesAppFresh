@@ -1,27 +1,37 @@
-<div class="pt-20 p-4 max-w-2xl mx-auto">
-  <h2 class="text-2xl font-bold mb-4">My Profile</h2>
+<div class="pt-20 p-4 min-h-screen text-white max-w-3xl mx-auto">
 
-  <div *ngIf="loading" class="text-gray-400">Loading…</div>
-  <div *ngIf="!loading && error" class="text-red-500">{{ error }}</div>
+  <h1 class="text-3xl font-bold mb-6">My Ratings</h1>
 
-  <div *ngIf="!loading && !error">
-    <p class="mb-4"><strong>Username:</strong> {{ username }}</p>
-
-    <h3 class="text-xl font-semibold mb-2">My Ratings</h3>
-    <div *ngIf="ratings.length === 0" class="text-gray-400 mb-4">
-      You haven’t rated any movies yet.
-    </div>
-    <div *ngIf="ratings.length > 0" class="space-y-2">
-      <div *ngFor="let r of ratings" class="flex items-center justify-between bg-gray-800 text-white p-3 rounded">
-        <div>
-          <span class="font-medium">Movie ID:</span> {{ r.movieId }}
-          <span class="ml-4"><strong>Score:</strong> {{ r.score }}/100</span>
-        </div>
-        <button (click)="removeRating(r)"
-                class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">
-          Remove
-        </button>
-      </div>
-    </div>
+  <!-- skeleton -->
+  <div *ngIf="loading" class="space-y-2">
+    <div *ngFor="let _ of [1,2,3,4,5,6]"
+         class="h-6 bg-gray-700 animate-pulse rounded"></div>
   </div>
+
+  <!-- error / empty -->
+  <p *ngIf="!loading && error" class="text-red-400">{{ error }}</p>
+  <p *ngIf="!loading && !error && rows.length===0"
+     class="text-gray-400">You haven’t rated anything yet.</p>
+
+  <!-- table -->
+  <table *ngIf="!loading && rows.length"
+         class="min-w-full text-sm">
+    <thead>
+      <tr class="bg-gray-700">
+        <th class="px-3 py-2 text-left">Movie</th>
+        <th class="px-3 py-2 text-left">Score</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let row of rows" class="border-b border-gray-700">
+        <td class="px-3 py-2">
+          <a [routerLink]="['/movies', row.movie.movieId]"
+             class="hover:underline">
+            {{ row.movie.title }}
+          </a>
+        </td>
+        <td class="px-3 py-2">{{ row.rating.score }}</td>
+      </tr>
+    </tbody>
+  </table>
 </div>

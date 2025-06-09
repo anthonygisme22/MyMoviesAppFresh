@@ -1,7 +1,13 @@
-img {
-  flex-shrink: 0;
+input {
+  background: #1f2937; /* tailwind gray‑800 */
+  color: white;
 }
 
-select {
-  width: 4rem;
+  input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #059669; /* green‑600 ring */
+  }
+
+label {
+  font-size: .875rem
 }

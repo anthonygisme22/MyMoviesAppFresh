@@ -1,40 +1,33 @@
-<!-- File: MyApp/src/app/recommendations/recommendations.component.html -->
+<div class="pt-20 p-4 text-white min-h-screen max-w-2xl mx-auto">
 
-<div class="pt-20 p-4 max-w-lg mx-auto space-y-4">
-  <h2 class="text-2xl font-bold">AI Recommendations</h2>
+  <h1 class="text-3xl font-bold mb-6">AI Movie Picks</h1>
 
-  <label class="block mb-1">Ask Glarky to recommend movies:</label>
-  <textarea [(ngModel)]="promptText"
-            rows="3"
-            class="w-full border p-2 rounded bg-gray-800 text-white"
-            placeholder="e.g. ‘Recommend me some sci-fi movies’">
-  </textarea>
+  <form (ngSubmit)="ask()" class="flex gap-4 mb-6">
+    <input [(ngModel)]="prompt" name="prompt"
+           placeholder="Ask e.g. 'mind‑bending thrillers'"
+           class="flex-1 bg-gray-700 px-3 py-2 rounded outline-none" />
+    <button type="submit"
+            class="bg-blue-600 hover:bg-blue-700 px-4 rounded">
+      Ask
+    </button>
+  </form>
 
-  <button (click)="submitPrompt()"
-          [disabled]="loading || !promptText.trim()"
-          class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">
-    {{ loading ? 'Thinking…' : 'Get Recommendations' }}
-  </button>
-
-  <!-- Show any error message -->
-  <p *ngIf="error" class="text-red-500 mt-2">{{ error }}</p>
-
-  <!-- If backend returned a rawResponse string, show it here -->
-  <div *ngIf="!loading && rawResponseText" class="bg-gray-800 text-white p-4 rounded mt-4">
-    <h3 class="font-semibold mb-2">Raw Response:</h3>
-    <pre class="whitespace-pre-wrap">{{ rawResponseText }}</pre>
+  <!-- skeleton -->
+  <div *ngIf="loading" class="space-y-4">
+    <div *ngFor="let _ of sk()" class="h-20 bg-gray-700 animate-pulse rounded"></div>
   </div>
 
-  <!-- If backend returned an array of RecommendationDto, render each one -->
-  <div *ngIf="!loading && recommendations.length > 0" class="mt-6 space-y-4">
-    <div *ngFor="let rec of recommendations" class="bg-gray-900 text-white p-4 rounded shadow">
-      <h3 class="font-semibold">{{ rec.title }}</h3>
-      <p class="text-gray-300 mt-1">{{ rec.reason }}</p>
+  <!-- error / empty -->
+  <p *ngIf="!loading && error" class="text-red-400">{{ error }}</p>
+  <p *ngIf="!loading && !error && recs.length===0"
+     class="text-gray-400">Ask the gorilla for recommendations!</p>
+
+  <!-- list -->
+  <div *ngIf="!loading && recs.length" class="space-y-4">
+    <div *ngFor="let r of recs"
+         class="bg-gray-800 rounded p-4 shadow-lg">
+      <h2 class="font-semibold text-lg mb-1">{{ r.title }}</h2>
+      <p class="text-sm text-white/80">{{ r.reason }}</p>
     </div>
   </div>
-
-  <!-- If the call succeeded but returned no items (empty array), show a message -->
-  <p *ngIf="!loading && !error && recommendations.length === 0 && !rawResponseText" class="text-gray-400 mt-4">
-    No recommendations returned.
-  </p>
 </div>

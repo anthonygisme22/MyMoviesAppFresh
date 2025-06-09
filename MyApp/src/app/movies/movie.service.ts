@@ -129,9 +129,28 @@ export class MovieService {
   }
 
   /* ---------- AI ------------------------------------------------------ */
+  /* ---------- AI ------------------------------------------------------ */
+  /* ---------- AI ------------------------------------------------------ */
   getRecommendations(prompt: string) {
-    return this.http.post<RecommendationDto[]>(this.reco, { prompt });
+    return this.http.post<RecommendationDto[] | { rawResponse: string }>(
+      `${this.reco}`,
+      { prompt }                              //  <-- matches DTO "Prompt"
+    ).pipe(
+      map(res => {
+        // If we already have an array, return it.
+        if (Array.isArray(res)) return res as RecommendationDto[];
+
+        // Otherwise try to parse rawResponse (controller's fallback).
+        try {
+          return JSON.parse(res.rawResponse) as RecommendationDto[];
+        } catch {
+          return []; // graceful empty list on bad JSON
+        }
+      })
+    );
   }
+
+
 
   /* helper */
   private getUserId(): number {
