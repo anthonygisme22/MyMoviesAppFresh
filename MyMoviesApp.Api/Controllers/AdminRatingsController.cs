@@ -7,12 +7,15 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using MyMoviesApp.Api.Contracts.Admin;
-using MyMoviesApp.Core.Services;
 using MyMoviesApp.Infrastructure.Data;
+using MyMoviesApp.Core.Services;
 
 namespace MyMoviesApp.Api.Controllers
 {
-    [Authorize(Policy = "AdminUserOnly")]
+    /* -----------------------------------------------------------
+       Only users whose JWT contains  role = Admin  may call this
+       -----------------------------------------------------------*/
+    [Authorize(Roles = "Admin")]
     [ApiController]
     [Route("api/admin/ratings")]
     public sealed class AdminRatingsController : ControllerBase
@@ -26,6 +29,7 @@ namespace MyMoviesApp.Api.Controllers
             _masterUserId = cfg.GetValue<int>("MasterUserId");
         }
 
+        /* ---------- GET  /api/admin/ratings --------------------- */
         [HttpGet]
         public async Task<IActionResult> GetAll(CancellationToken ct)
         {
@@ -45,6 +49,7 @@ namespace MyMoviesApp.Api.Controllers
             return Ok(list);
         }
 
+        /* ---------- POST  /api/admin/ratings  ------------------- */
         public sealed record AdminUpsertDto(int MovieId, int Score);
 
         [HttpPost]
@@ -54,6 +59,7 @@ namespace MyMoviesApp.Api.Controllers
                 r => r.UserId == _masterUserId && r.MovieId == dto.MovieId, ct);
 
             if (rating is null)
+            {
                 _db.Ratings.Add(new Core.Entities.Rating
                 {
                     UserId = _masterUserId,
@@ -61,6 +67,7 @@ namespace MyMoviesApp.Api.Controllers
                     Score = dto.Score,
                     RatedAt = DateTime.UtcNow
                 });
+            }
             else
             {
                 rating.Score = dto.Score;
@@ -71,6 +78,7 @@ namespace MyMoviesApp.Api.Controllers
             return Ok();
         }
 
+        /* ---------- POST  /api/admin/ratings/tmdb --------------- */
         [HttpPost("tmdb")]
         public async Task<IActionResult> UpsertByTmdbId(
             AddMasterRatingRequest dto,
@@ -83,6 +91,7 @@ namespace MyMoviesApp.Api.Controllers
             return Ok(new { MovieId = id });
         }
 
+        /* ---------- DELETE /api/admin/ratings/{movieId} ---------- */
         [HttpDelete("{movieId:int}")]
         public async Task<IActionResult> Delete(int movieId, CancellationToken ct)
         {

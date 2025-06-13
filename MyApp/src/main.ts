@@ -1,30 +1,44 @@
+/********************************************************************
+ *  Stand‑alone bootstrap (Angular, no NgModule)                    *
+ *******************************************************************/
+import { enableProdMode } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
+
 import {
   provideHttpClient,
-  withInterceptorsFromDi,
-  HTTP_INTERCEPTORS
+  withInterceptorsFromDi
 } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
 
+import { HTTP_INTERCEPTORS } from '@angular/common/http';
+import {
+  provideRouter,
+  withEnabledBlockingInitialNavigation
+} from '@angular/router';
+
+import { environment } from './environments/environment';
+
+/* root component & helpers */
 import { AppComponent } from './app/app.component';
-import { routes } from './app/app-routing.module';
+import { appRoutes } from './app/app.routes';
+import { TokenInterceptor } from './app/auth/token.interceptor';
 
-import { AuthInterceptor } from './app/auth/auth.interceptor';
+/* -------------------------------------------------------------- */
+if (environment.production) {
+  enableProdMode();
+}
 
 bootstrapApplication(AppComponent, {
   providers: [
-    // Tell HttpClient to look for HTTP_INTERCEPTORS in DI
+    /* Router */
+    provideRouter(
+      appRoutes,
+      withEnabledBlockingInitialNavigation()
+    ),
+
+    /* HttpClient picks up DI‑registered interceptors */
     provideHttpClient(withInterceptorsFromDi()),
 
-    // Register our AuthInterceptor so JWT is attached to every request
-    {
-      provide: HTTP_INTERCEPTORS,
-      useClass: AuthInterceptor,
-      multi: true
-    },
-
-    // Provide the router with our exported `routes`
-    provideRouter(routes)
+    /* Register the TokenInterceptor in DI */
+    { provide: HTTP_INTERCEPTORS, useClass: TokenInterceptor, multi: true }
   ]
-})
-  .catch(err => console.error(err));
+}).catch(err => console.error(err));

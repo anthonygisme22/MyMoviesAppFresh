@@ -1,15 +1,10 @@
-﻿// File: MyMoviesApp.Api/Controllers/RecommendationsController.cs
-
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MyMoviesApp.Core.Interfaces;
 using MyMoviesApp.Infrastructure.Data;
-using MyMoviesApp.Infrastructure.Services;
-using System.Threading.Tasks;
-using System.Linq;
-using System;
 
 namespace MyMoviesApp.Api.Controllers
 {
@@ -27,58 +22,60 @@ namespace MyMoviesApp.Api.Controllers
             _db = db;
         }
 
+        /* ───── DTOs ─────────────────────────────────────────────────── */
+        public class RecommendationRequest { public string Prompt { get; set; } = ""; }
+        public class RecommendationDto { public string Title { get; set; } = ""; public string Reason { get; set; } = ""; }
+
+        /* ───── POST /api/recommendations ────────────────────────────── */
         [HttpPost]
         public async Task<IActionResult> Recommend([FromBody] RecommendationRequest req)
         {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            /* Movies already rated by the user */
+            var rated = await _db.Ratings
+                .Where(r => r.UserId == userId)
+                .Include(r => r.Movie)
+                .Select(r => r.Movie.Title)
+                .ToListAsync();
+
+            /* Build system + user prompt */
+            var systemPrompt =
+                "You are a helpful movie recommendation assistant. " +
+                "Respond ONLY with valid JSON array of objects [{\"Title\":\"...\",\"Reason\":\"...\"}]. " +
+                "Exclude any movie already seen: " + string.Join(", ", rated) + ".";
+
+            var fullPrompt = systemPrompt + "\nUser: " +
+                             (string.IsNullOrWhiteSpace(req.Prompt)
+                                 ? "Recommend some movies."
+                                 : req.Prompt.Trim());
+
+            /* Call OpenAI */
+            var raw = await _openAi.GetChatCompletionAsync(fullPrompt);
+
+            /* Try parse → fallback if invalid/empty -------------------- */
+            RecommendationDto[] list;
             try
             {
-                var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-                var ratedTitles = await _db.Ratings
-                    .Where(r => r.UserId == userId)
-                    .Select(r => r.Movie.Title)
-                    .ToListAsync();
-
-                var systemPrompt =
-                    "You are a helpful movie recommendation assistant. " +
-                    "Respond only in valid JSON array of RecommendationDto. " +
-                    $"User has already seen: {string.Join(", ", ratedTitles)}. " +
-                    "Do not recommend those.";
-
-                var userPrompt = string.IsNullOrWhiteSpace(req.Prompt)
-                    ? "Recommend me some movies"
-                    : req.Prompt;
-
-                var fullPrompt = systemPrompt + "\nUser: " + userPrompt;
-
-                var response = await _openAi.GetChatCompletionAsync(fullPrompt);
-
-                var recs = JsonSerializer.Deserialize<RecommendationDto[]>(response);
-                if (recs == null) recs = Array.Empty<RecommendationDto>();
-                return Ok(recs);
+                list = JsonSerializer.Deserialize<RecommendationDto[]>(raw)
+                       ?? Array.Empty<RecommendationDto>();
             }
-            catch (InvalidOperationException ex)
+            catch
             {
-                return BadRequest(new { error = ex.Message });
+                list = Array.Empty<RecommendationDto>();
             }
-            catch (JsonException)
+
+            if (list.Length == 0)
             {
-                return Ok(new { rawResponse = await _openAi.GetChatCompletionAsync(req.Prompt) });
+                list = new[] {
+                    new RecommendationDto {
+                        Title  = "Inception",
+                        Reason = "Fallback recommendation when no result returned."
+                    }
+                };
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
-            }
+
+            return Ok(list);
         }
-    }
-
-    public class RecommendationRequest
-    {
-        public string Prompt { get; set; }
-    }
-
-    public class RecommendationDto
-    {
-        public string Title { get; set; }
-        public string Reason { get; set; }
     }
 }

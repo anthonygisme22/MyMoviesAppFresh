@@ -1,10 +1,10 @@
 <div class="pt-20 p-4 text-white min-h-screen max-w-2xl mx-auto">
 
-  <h1 class="text-3xl font-bold mb-6">AI Movie Picks</h1>
+  <h1 class="text-3xl font-bold mb-6">AI&nbsp;Movie Picks</h1>
 
   <form (ngSubmit)="ask()" class="flex gap-4 mb-6">
     <input [(ngModel)]="prompt" name="prompt"
-           placeholder="Ask e.g. 'mind‑bending thrillers'"
+           placeholder="Ask e.g. 'mind‑bending thrillers'…"
            class="flex-1 bg-gray-700 px-3 py-2 rounded outline-none" />
     <button type="submit"
             class="bg-blue-600 hover:bg-blue-700 px-4 rounded">
@@ -12,17 +12,16 @@
     </button>
   </form>
 
-  <!-- skeleton -->
-  <div *ngIf="loading" class="space-y-4">
-    <div *ngFor="let _ of sk()" class="h-20 bg-gray-700 animate-pulse rounded"></div>
+  <!-- spinner while loading -->
+  <div *ngIf="loading" class="flex items-center gap-2 mb-6">
+    <div class="loader border-4 border-green-500 border-t-transparent rounded-full w-6 h-6 animate-spin"></div>
+    <p>Thinking…</p>
   </div>
 
-  <!-- error / empty -->
-  <p *ngIf="!loading && error" class="text-red-400">{{ error }}</p>
-  <p *ngIf="!loading && !error && recs.length===0"
-     class="text-gray-400">Ask the gorilla for recommendations!</p>
+  <!-- error text -->
+  <p *ngIf="!loading && error" class="text-red-400 mb-2">{{ error }}</p>
 
-  <!-- list -->
+  <!-- recommendations list -->
   <div *ngIf="!loading && recs.length" class="space-y-4">
     <div *ngFor="let r of recs"
          class="bg-gray-800 rounded p-4 shadow-lg">

@@ -21,17 +21,23 @@ export class RecommendationsComponent {
 
   ask() {
     if (!this.prompt.trim()) return;
-    this.loading = true; this.error = '';
+    this.loading = true;
+    this.error = '';
+    this.recs = [];
 
     this.movies.getRecommendations(this.prompt.trim()).subscribe({
-      next: list => { this.recs = list; this.loading = false; },
-      error: err => {
+      next: list => {
+        this.recs = list;
+        this.loading = false;
+        if (!list.length) {
+          this.error = 'No recommendations found.';
+        }
+      },
+      error: (err) => {
+        console.error('AI Recs error:', err);
         this.error = err.error?.error || 'AI service failed';
         this.loading = false;
       }
     });
   }
-
-
-  sk(n = 5) { return Array.from({ length: n }); }
 }

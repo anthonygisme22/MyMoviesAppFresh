@@ -122,8 +122,19 @@ export class MovieService {
   }
 
   /* ---------- admin ratings ------------------------------------------ */
-  getAdminRatings() { return this.http.get<AdminRatingDto[]>(this.adminList); }
-  addMasterRating(p: { movieId: number; score: number }) { return this.upsertAdminRating(p.movieId, p.score); }
+  /* ---------- admin ratings ------------------------------------------ */
+  getAdminRatings() {
+    return this.http.get<AdminRatingDto[]>(this.adminList);
+  }
+
+  /** Add or update Glarky’s score using a TMDb numeric id. */
+  addMasterRating(p: { tmdbId: string; score: number }) {
+    return this.http.post<{ movieId: number }>(
+      `${this.adminUpsert}/tmdb`,          //  <-- use /tmdb helper
+      { tmdbId: p.tmdbId, score: p.score }
+    );
+  }
+
   upsertAdminRating(id: number, score: number) {
     return this.http.post<AdminRatingDto>(this.adminUpsert, { movieId: id, score });
   }
