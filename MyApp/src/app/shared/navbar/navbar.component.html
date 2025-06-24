@@ -1,27 +1,28 @@
-<nav class="bg-gradient-to-r from-green-800 to-green-900 text-white fixed top-0 w-full z-50 shadow-lg">
+<nav class="bg-gradient-to-r from-spud to-spud-dark text-white fixed top-0 w-full z-50 shadow-lg">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16">
 
       <!-- ── Logo / Home ─────────────────────────────────────────────── -->
       <a routerLink="/" class="flex items-center space-x-2">
-        <img src="assets/gorilla-logo.png" alt="MovieGorilla"
-             class="h-8 w-8 object-cover" />
-        <span class="text-xl font-extrabold tracking-tight">MovieGorilla</span>
+        <img src="assets/potato.jpg" alt="Couch Potato"
+             class="h-8 w-8 object-cover rounded-md" />
+        <span class="text-xl font-extrabold tracking-tight">CouchPotato</span>
+
       </a>
 
       <!-- ── Main links (always visible) ─────────────────────────────── -->
       <div class="hidden md:flex space-x-4">
-        <a routerLink="/movies" class="px-3 py-2 rounded hover:bg-green-700">Browse</a>
-        <a routerLink="/watchlist" class="px-3 py-2 rounded hover:bg-green-700">Watchlist</a>
-        <a routerLink="/recommendations" class="px-3 py-2 rounded hover:bg-green-700">AI Picks</a>
-        <a routerLink="/profile" class="px-3 py-2 rounded hover:bg-green-700">Profile</a>
+        <a routerLink="/movies" class="px-3 py-2 rounded hover:bg-spud-dark">Browse</a>
+        <a routerLink="/watchlist" class="px-3 py-2 rounded hover:bg-spud-dark">Watchlist</a>
+        <a routerLink="/recommendations" class="px-3 py-2 rounded hover:bg-spud-dark">AI&nbsp;Picks</a>
+        <a routerLink="/profile" class="px-3 py-2 rounded hover:bg-spud-dark">Profile</a>
 
         <!-- Admin‑only links -->
         <ng-container *ngIf="auth.isAdmin()">
-          <a routerLink="/admin/master-ratings" class="px-3 py-2 rounded hover:bg-green-700">
+          <a routerLink="/admin/master-ratings" class="px-3 py-2 rounded hover:bg-spud-dark">
             Master Ratings
           </a>
-          <a routerLink="/admin/add-rating" class="px-3 py-2 rounded hover:bg-green-700">
+          <a routerLink="/admin/add-rating" class="px-3 py-2 rounded hover:bg-spud-dark">
             Add Rating
           </a>
         </ng-container>
@@ -34,7 +35,7 @@
         <ng-container *ngIf="auth.isLoggedIn(); else authLinks">
           <span class="text-sm">{{ auth.getUsername() }}</span>
           <button (click)="logout()"
-                  class="px-3 py-2 rounded hover:bg-green-700 bg-red-600">
+                  class="px-3 py-2 rounded hover:bg-stripe bg-red-600">
             Logout
           </button>
         </ng-container>
@@ -42,11 +43,11 @@
         <!-- When NOT logged‑in -->
         <ng-template #authLinks>
           <a routerLink="/login"
-             class="px-3 py-2 rounded hover:bg-green-700 bg-blue-600">
+             class="px-3 py-2 rounded hover:bg-spud-dark bg-midnight">
             Login
           </a>
           <a routerLink="/register"
-             class="px-3 py-2 rounded hover:bg-green-700 bg-purple-600">
+               class="px-3 py-2 rounded hover:bg-spud-dark bg-couch">
             Register
           </a>
         </ng-template>
